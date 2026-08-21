@@ -573,6 +573,149 @@
       "proprieta": "Cairo Communication",
       "stato": "da_verificare",
       "nota": "Telegiornale La7 (dir. Mentana). Taglio centrale; verifica il feed."
+    },
+    {
+      "name": "Askanews",
+      "domain": "askanews.it",
+      "area": "C",
+      "rss": "https://www.askanews.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "agenzia di stampa",
+      "tipo": "agenzia"
+    },
+    {
+      "name": "Dire",
+      "domain": "dire.it",
+      "area": "C",
+      "rss": "https://www.dire.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "agenzia di stampa",
+      "tipo": "agenzia"
+    },
+    {
+      "name": "Jacobin Italia",
+      "domain": "jacobinitalia.it",
+      "area": "SR",
+      "rss": "https://jacobinitalia.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "sinistra, rafforza SR",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Collettiva",
+      "domain": "collettiva.it",
+      "area": "CS",
+      "rss": "https://www.collettiva.it/feed",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "area CGIL",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Valigia Blu",
+      "domain": "valigiablu.it",
+      "area": "CS",
+      "rss": "https://www.valigiablu.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "critica dei media",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Wired Italia",
+      "domain": "wired.it",
+      "area": "C",
+      "rss": "https://www.wired.it/feed/rss/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "tech, progressista sui diritti",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Formiche",
+      "domain": "formiche.net",
+      "area": "CD",
+      "rss": "https://formiche.net/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "atlantista",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Startmag",
+      "domain": "startmag.it",
+      "area": "CD",
+      "rss": "https://www.startmag.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "economico-atlantista",
+      "tipo": "giornale"
+    },
+    {
+      "name": "L'Indipendente",
+      "domain": "lindipendente.online",
+      "area": "DR",
+      "rss": "https://www.lindipendente.online/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "sovranista/anti-establishment",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Byoblu",
+      "domain": "byoblu.com",
+      "area": "DR",
+      "rss": "https://www.byoblu.com/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "sovranista",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Factanza",
+      "domain": "factanza.it",
+      "area": "CS",
+      "rss": "https://www.factanza.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "nativo digitale, pubblico giovane",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Torcha",
+      "domain": "torcha.it",
+      "area": "CS",
+      "rss": "https://www.torcha.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "nativo digitale, pubblico giovane",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Will Media",
+      "domain": "willmedia.it",
+      "area": "C",
+      "rss": "https://www.willmedia.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch feed aperti)",
+      "primaria": false,
+      "nota": "nativo digitale",
+      "tipo": "giornale"
     }
   ]
 }
