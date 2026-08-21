@@ -288,6 +288,19 @@ def chiama(client, prompt, schema, max_tokens=16000):
 
 
 def raggruppa(client, articoli, ore):
+    # Non mandare TUTTO al modello in un colpo solo: con molte centinaia di
+    # articoli la risposta supera il limite di token e viene tagliata a meta',
+    # cosi' il raggruppamento fallisce e ogni articolo resta un evento a se'.
+    # Teniamo le notizie in agenda (primaria) e le piu' recenti, fino a un tetto.
+    MAX_ART = 500
+    if len(articoli) > MAX_ART:
+        prim = [a for a in articoli if a.get("primaria")]
+        resto = [a for a in articoli if not a.get("primaria")]
+        resto.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
+        tenuti = prim + resto[: max(0, MAX_ART - len(prim))]
+        print("  troppi articoli (%d): raggruppo i %d piu' rilevanti (agenda + recenti)"
+              % (len(articoli), len(tenuti)))
+        articoli = tenuti
     righe = []
     for a in articoli:
         ora = a["pubblicato"][11:16]
@@ -295,8 +308,10 @@ def raggruppa(client, articoli, ore):
         righe.append("%s [%s, %s] %s" % (a["id"], a["fonte"], ora, a["titolo"]))
     prompt = PROMPT_RAGGRUPPA.format(ore=ore, titoli="\n".join(righe))
 
-    dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA)
+    dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=32000)
     print("  passo 1 raggruppamento: %d token in, %d out" % (uso.input_tokens, uso.output_tokens))
+    if uso.output_tokens >= 32000:
+        print("  ATTENZIONE: risposta al limite dei token, il raggruppamento potrebbe essere parziale")
 
     per_id = {a["id"]: a for a in articoli}
     eventi, usati = [], set()

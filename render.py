@@ -565,7 +565,7 @@ def main():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Il Vaglio &mdash; la stessa notizia, da un estremo all'altro</title>
+<title>VoxViva &mdash; la stessa notizia, da un estremo all'altro</title>
 <meta name="description" content="Come la stessa notizia italiana viene titolata dalla sinistra radicale alla destra radicale. Aggiornato ogni giorno.">
 %(ga)s%(adsense)s<style>%(css)s</style>
 </head>
@@ -574,7 +574,7 @@ def main():
 %(leaderboard)s
 <header class="top"><div class="wrap">
   <div class="brand">
-    <h1>Il Vaglio</h1>
+    <h1>VoxViva</h1>
     <span class="tag">la stessa notizia, da un estremo all'altro</span>
   </div>
   <p class="claim">Quasi nessuno legge gli articoli: si leggono i titoli. Qui ogni notizia
@@ -625,7 +625,7 @@ def main():
       <p class="fonti">%(fonti)s</p>
     </div>
   </div>
-  <p class="legale">Il Vaglio riporta i titoli cos&igrave; come pubblicati, con l'indicazione
+  <p class="legale">VoxViva riporta i titoli cos&igrave; come pubblicati, con l'indicazione
   della testata e il collegamento all'articolo originale, e non riproduce i testi. Ogni clic
   porta al sito dell'editore. Le testate sono titolari dei diritti sui propri contenuti; per
   richieste di rimozione o segnalazioni: scrivi all'indirizzo di contatto. Progetto
