@@ -1,4 +1,4 @@
-# Il Vaglio — v2
+# VoxViva
 
 La stessa notizia italiana, dal titolo più a sinistra a quello più a destra.
 
