@@ -20,9 +20,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
-    defaults:
-      run:
-        working-directory: VoxViva-da-caricare
     steps:
       - name: Scarica il codice
         uses: actions/checkout@v4
@@ -50,7 +47,7 @@ jobs:
       - name: Carica il sito
         uses: actions/upload-pages-artifact@v3
         with:
-          path: VoxViva-da-caricare/web
+          path: web
 
       - name: Pubblica su Pages
         id: deploy
