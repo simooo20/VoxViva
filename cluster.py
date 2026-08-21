@@ -323,7 +323,7 @@ def raggruppa(client, articoli, ore):
                 usati.add(i)
         if membri:
             eventi.append({
-                "titolo_neutro": ev["titolo_neutro"].strip(),
+                "titolo_neutro": (ev.get("titolo_neutro") or membri[0]["titolo"]).strip(),
                 "fatto_specifico": (ev.get("fatto_specifico") or "").strip(),
                 "tema": ev.get("tema", "altro"),
                 "articoli": membri,
