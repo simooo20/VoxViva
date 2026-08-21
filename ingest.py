@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
+import gzip
+import urllib.request
 import feedparser
 
 from scala import AREE
@@ -30,6 +32,30 @@ OUT = BASE / "data" / "articles.json"
 # come fa qualunque lettore di feed: e' l'uso per cui i feed RSS esistono.
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+
+# Non basta lo User-Agent: molti siti dietro filtri anti-bot lasciano passare
+# solo richieste con l'intero corredo di header di un browser (lingua, tipi
+# accettati, ecc.). Proviamo prima cosi'; se fallisce, feedparser da solo.
+_HEADERS_BROWSER = {
+    "User-Agent": UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
+
+
+def scarica_feed(url):
+    """Scarica il feed con header da browser vero; ritorna i bytes o None."""
+    try:
+        req = urllib.request.Request(url, headers=_HEADERS_BROWSER)
+        with urllib.request.urlopen(req, timeout=15) as r:
+            data = r.read()
+            if (r.headers.get("Content-Encoding") or "").lower() == "gzip":
+                data = gzip.decompress(data)
+            return data
+    except Exception:
+        return None
 
 # parametri di tracciamento che sporcano gli url e rompono la deduplica
 TRACKING = re.compile(r"^(utm_|fbclid|gclid|ref|refresh_ce|__twitter|mc_|igshid|amp)", re.I)
@@ -134,7 +160,8 @@ def main():
             report.append({"fonte": nome, "area": area, "presi": 0, "nota": "nessun feed configurato"})
             continue
         try:
-            fp = feedparser.parse(url_feed, agent=UA)
+            dati_feed = scarica_feed(url_feed)
+            fp = feedparser.parse(dati_feed) if dati_feed else feedparser.parse(url_feed, agent=UA)
         except Exception as exc:
             report.append({"fonte": nome, "area": area, "presi": 0, "nota": "errore: %s" % str(exc)[:80]})
             continue
