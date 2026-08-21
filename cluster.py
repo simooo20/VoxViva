@@ -36,7 +36,8 @@ from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
 import re as _re
 import urllib.request
 
-UA = "IlVaglio/1.0 (analisi comparativa di titoli non commerciale; +mailto:tuo@indirizzo.it)"
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 BASE = Path(__file__).resolve().parent
 IN = BASE / "data" / "articles.json"
@@ -53,7 +54,7 @@ def leggi_incipit(url, max_chars=700):
     """
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
-        html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8", "ignore")
+        html = urllib.request.urlopen(req, timeout=8).read().decode("utf-8", "ignore")
     except Exception:
         return ""
     testo = ""
@@ -229,9 +230,9 @@ SCHEMA_ANALIZZA = {
 
 PROMPT_ANALIZZA = """Per ognuno di questi eventi ti do i titoli con cui testate di orientamento diverso lo hanno raccontato. L'etichetta fra parentesi quadre indica la posizione della testata su una scala a cinque: sinistra radicale, centro-sinistra, centro e agenzie, centro-destra, destra radicale.
 
-Per ogni evento produci: quanto diverge l'inquadratura, una frase secca sul duello fra i due estremi, e una nota di due o tre frasi.
+Per ogni evento produci: quanto diverge l'inquadratura, una frase secca sul duello fra i due estremi, e una nota di tre o quattro frasi che confronta come le diverse testate RACCONTANO la stessa notizia — nel titolo E nel corpo del pezzo (quando c'è l'estratto).
 
-REGOLA D'ORO — devi essere TOTALMENTE IMPARZIALE. La nota «come cambia il titolo» descrive SOLO le differenze oggettive, verificabili nel testo dei titoli. È un referto, non un commento. Vietato:
+REGOLA D'ORO — devi essere TOTALMENTE IMPARZIALE. La nota «come cambia il racconto» descrive SOLO le differenze oggettive, verificabili nel testo dei titoli e degli estratti. È un referto, non un commento. Vietato:
 - dire o insinuare che una testata mente, è in malafede, manipola o inganna;
 - scrivere quale versione è «giusta» o «più vicina alla verità»;
 - aggiungere la tua opinione sul fatto o sui protagonisti;
@@ -249,7 +250,7 @@ Il modello ideale di nota è quello dell'evento dei droni: «L'ANSA titola sul n
 
 REGISTRO — scrivi per il LETTORE del sito, non per chi lo costruisce. Terza persona, come la didascalia di un'analisi dei media su un quotidiano. Nomina le testate, non «la sinistra» in astratto quando puoi dire «Il Post» o «Domani». VIETATO nominare il sito, il metodo, «il selettore», «la finestra», «campionato», «in prima pagina», o rivolgerti all'autore. Niente «noi». La nota deve poter stare sotto qualsiasi rassegna stampa seria.
 
-Quando disponibile, per alcuni articoli trovi un ESTRATTO del testo oltre al titolo: usalo per rendere la nota più precisa (un titolo può dire una cosa e il pezzo un'altra), ma sul confronto restano i titoli. Non citare frasi lunghe dell'articolo: riassumi il contenuto con parole neutre.
+Per la maggior parte degli articoli trovi, oltre al titolo, un ESTRATTO del pezzo (le prime righe). USALO: il confronto non è solo fra i titoli ma fra il RACCONTO — il tono, le parole scelte, cosa il pezzo mette in evidenza e cosa lascia sullo sfondo, come inquadra causa ed effetto. Un titolo può essere asciutto e il pezzo caricato, o viceversa: quando succede, segnalalo. Resta descrittivo e oggettivo, non citare frasi lunghe dell'articolo, riassumi con parole neutre.
 
 Equidistanza obbligatoria: se è un giornale di sinistra ad ammorbidire, dillo con lo stesso tono con cui diresti che uno di destra carica, e viceversa. Se la differenza è minima, scrivi che è minima invece di inventarla. Le agenzie sono di solito le più asciutte, ed è utile dirlo.
 
@@ -457,13 +458,29 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
         print("  passo 2 saltato: nessun evento con estremi abbastanza distanti")
         return
 
+    # Leggiamo un pezzo di ogni articolo (og:description + primi paragrafi) per
+    # poter confrontare non solo il titolo ma il RACCONTO: tono, parole scelte,
+    # cosa mette in evidenza il pezzo. Il testo non viene mai pubblicato, serve
+    # solo a informare la nota. Best-effort e con un tetto, per non allungare
+    # troppo il giro.
     blocchi = []
+    letti = 0
+    MAX_LETTURE = 60
+    cache_incipit = {}
     for n, (_, ev) in enumerate(candidati, 1):
         righe = ["Evento %d - %s" % (n, ev["titolo_neutro"])]
         # solo le testate con una linea: l'aggregatore non e' una voce da analizzare
         for a in ordina_da_sinistra([x for x in ev["articoli"] if x.get("area") in AREE]):
             righe.append('  [%s] %s: "%s"' % (NOMI[a["area"]], a["fonte"], a["titolo"]))
+            url = a.get("url")
+            if url and letti < MAX_LETTURE:
+                if url not in cache_incipit:
+                    cache_incipit[url] = leggi_incipit(url)
+                    letti += 1
+                if cache_incipit[url]:
+                    righe.append('       estratto: %s' % cache_incipit[url])
         blocchi.append("\n".join(righe))
+    print("  letti %d incipit d'articolo per l'analisi" % letti)
 
     prompt = PROMPT_ANALIZZA.format(eventi="\n\n".join(blocchi))
     dati, uso = chiama(client, prompt, SCHEMA_ANALIZZA)

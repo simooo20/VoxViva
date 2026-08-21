@@ -25,7 +25,11 @@ BASE = Path(__file__).resolve().parent
 SOURCES = BASE / "sources.json"
 OUT = BASE / "data" / "articles.json"
 
-UA = "IlVaglio/1.0 (aggregatore di titoli non commerciale; +mailto:tuo@indirizzo.it)"
+# Molte testate bloccano gli user-agent "robot" sconosciuti (403 o feed vuoto)
+# pur avendo un feed valido e aggiornato. Ci presentiamo come un browser reale,
+# come fa qualunque lettore di feed: e' l'uso per cui i feed RSS esistono.
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 # parametri di tracciamento che sporcano gli url e rompono la deduplica
 TRACKING = re.compile(r"^(utm_|fbclid|gclid|ref|refresh_ce|__twitter|mc_|igshid|amp)", re.I)

@@ -441,7 +441,7 @@ def blocco_evento(ev, con_colonne=True):
     p.append("</div>")
 
     if ev.get("nota"):
-        p.append('<p class="nota"><span class="et">come cambia il titolo</span>%s</p>' % e(ev["nota"]))
+        p.append('<p class="nota"><span class="et">come cambia il racconto</span>%s</p>' % e(ev["nota"]))
 
     p.append("</article>")
     return "\n".join(p)
@@ -608,7 +608,7 @@ def main():
       <p>Quando raggruppa, il modello non vede la posizione politica delle testate. E non
       riscrive mai i titoli: restituisce solo dei riferimenti. I titoli che leggi sono quelli
       pubblicati dalle testate, alla lettera. Il titolo neutro dell'evento e la nota
-      &laquo;come cambia il titolo&raquo; sono invece testo nostro.</p>
+      &laquo;come cambia il racconto&raquo; sono invece testo nostro.</p>
     </div>
     <div>
       <h4>Le etichette</h4>
