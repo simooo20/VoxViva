@@ -38,7 +38,7 @@ jobs:
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-sonnet-4-5' }}
         run: |
           python ingest.py --ore 24
-          python cluster.py --leggi-articoli
+          python cluster.py
           python render.py --max 15
 
       - name: Configura Pages
