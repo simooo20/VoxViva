@@ -1,0 +1,14 @@
+# roba generata: si ricrea a ogni giro, non serve tenerla nel repo
+__pycache__/
+*.pyc
+data/articles.json
+data/clusters.json
+data/*.json
+
+# la pagina viene ricostruita e pubblicata dalla Action:
+# la teniamo nel repo come "prima copia" cosi' Pages ha qualcosa da mostrare
+# fin dal primo istante. (web/index.html NON e' ignorato apposta.)
+
+# cartelle di servizio locali
+_pycache_da_cancellare/
+*.zip
