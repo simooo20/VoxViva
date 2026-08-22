@@ -629,8 +629,8 @@ def main():
   a destra, col lancio d'agenzia in mezzo. Nessun titolo &egrave; riscritto.</p>
   %(stat)s
   <div class="scala">%(scala)s</div>
-  <p class="scala-nota">I colori seguono la scala, non i partiti: in Italia rosso e azzurro
-  direbbero l'opposto della convenzione americana.</p>
+  <p class="scala-nota">La scala corre da sinistra a destra come la leggeresti su carta:
+  conta solo la posizione, dall'estremo pi&ugrave; a sinistra a quello pi&ugrave; a destra.</p>
   %(avviso)s
   <p style="margin:22px 0 0;font-size:13px;color:var(--ink-3)">
     Ultimo aggiornamento: %(agg)s &middot; finestra: ultime %(ore)d ore
@@ -699,6 +699,33 @@ def main():
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(doc, encoding="utf-8")
+
+    # DIAGNOSTICA (gratis, nessuna chiamata all'API): un piccolo file leggibile
+    # dall'esterno per capire, giro per giro, se il collo di bottiglia e' la
+    # copertura di una colonna o il raggruppamento. Serve a decidere dove
+    # aggiungere feed, senza dover leggere i log di GitHub.
+    from collections import Counter as _C
+    def _ncol(ev):
+        return sum(1 for k in ("sinistra", "centro", "destra") if ev["per_colonna"].get(k))
+    con_colonna = {k: sum(1 for ev in eventi if ev["per_colonna"].get(k))
+                   for k in ("sinistra", "centro", "destra")}
+    stato = {
+        "generato": d.get("generato"),
+        "modello": d.get("modello"),
+        "titoli_letti": d.get("totale_articoli", 0),
+        "testate_attive": len(d.get("testate_attive", [])),
+        "articoli_per_area": d.get("per_area", {}),
+        "eventi_totali": len(eventi),
+        "distribuzione_colonne_per_evento": dict(_C(_ncol(ev) for ev in eventi)),
+        "eventi_con_colonna": con_colonna,
+        "confronti_completi_3col": len(completi),
+        "pubblicati": len(principali) + len(altri),
+        "in_prima_pagina": len(principali),
+        "scartati_lato_mancante": scartati_incompleti,
+    }
+    (OUT.parent / "stato.json").write_text(
+        json.dumps(stato, ensure_ascii=False, indent=2), encoding="utf-8")
+
     print("Sito generato: %s" % OUT)
     print("  %d confronti pubblicati (%d in prima pagina), %d scartati per lato mancante, %d punti ciechi"
           % (len(principali) + len(altri), len(principali), scartati_incompleti, len(ciechi)))

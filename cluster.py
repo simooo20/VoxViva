@@ -132,15 +132,15 @@ Non guardare le parole in comune: guarda di quale fatto si parla.
 - Due sbarchi in due giorni diversi, due incidenti stradali in due province, due dichiarazioni dello stesso politico su temi diversi → sempre eventi separati.
 - Un ARGOMENTO non è un evento. "La crisi migratoria a Ceuta" è un argomento e in una giornata produce dieci fatti distinti: il Marocco che ferma 294 persone al confine, Sánchez che convoca i ministri, un commento sulla politica europea. Sono tre eventi, non uno.
 
-**Nel dubbio, spacca.** Due gruppi piccoli e giusti valgono più di un gruppo grande e sbagliato. Un evento con un solo titolo è un risultato perfettamente accettabile.
+**Nel dubbio, UNISCI — poi si controlla.** Un secondo passaggio ricontrollerà ogni gruppo e caccerà i titoli che non c'entrano, quindi un gruppo un po' generoso è sicuro; un gruppo spaccato no. Se lo stesso fatto finisce in due gruppi separati, il confronto fra le testate di orientamento opposto si perde e non lo recupera più nessuno. Perciò, quando due titoli *potrebbero* essere lo stesso singolo fatto, mettili insieme. Resta fermo solo il divieto qui sopra: non unire MAI fatti davvero diversi (evento, luogo, giorno o protagonisti diversi).
 
 **Come ti controlli.** Per ogni gruppo devi scrivere `fatto_specifico`: chi ha fatto cosa, dove, quando. Poi rileggi ogni titolo del gruppo e chiediti se quel titolo parla di *quel* fatto. Se la risposta è "parla di qualcosa di collegato", il titolo va fuori. Se per far entrare tutti i titoli devi scrivere un fatto_specifico vago, allora il gruppo è sbagliato: spaccalo.
 
 **Commenti ed editoriali.** Un commento, un retroscena o un editoriale va nel gruppo del fatto di cui parla — sono la parte più interessante da confrontare. Ma solo se parla di *quel* fatto: un editoriale sullo stato della sinistra italiana non va nel gruppo di una singola dichiarazione di Schlein.
 
-Regole formali:
-- Ogni id deve comparire in esattamente un evento.
-- Non scartare niente: i titoli che restano soli diventano eventi con un id.
+Regole formali (IMPORTANTISSIME):
+- Riporta SOLO i gruppi con DUE O PIÙ titoli. I titoli che restano da soli NON vanno riportati: ci pensa il programma a tenerli come eventi singoli. Non elencare i singoli, non riempire la risposta ripetendo id già soli. Riporta esclusivamente gli accostamenti che hai trovato: così la risposta resta corta e non viene tagliata a metà.
+- Ogni id compare in un solo gruppo.
 - Il titolo_neutro lo scrivi tu, asciutto come un lancio d'agenzia. Non copiare il titolo di nessuna testata e non usarne le parole cariche.
 
 Titoli:
@@ -310,7 +310,12 @@ def raggruppa(client, articoli, ore):
     # articoli la risposta supera il limite di token e viene tagliata a meta',
     # cosi' il raggruppamento fallisce e ogni articolo resta un evento a se'.
     # Teniamo le notizie in agenda (primaria) e le piu' recenti, fino a un tetto.
-    MAX_ART = 300
+    # Ora il modello riporta SOLO i gruppi da 2+ titoli (i singoli li ricrea
+    # Python qui sotto): la risposta non cresce più con il numero di articoli,
+    # quindi possiamo dargliene molti di più senza rischiare il taglio a metà.
+    # Più articoli in ingresso = più probabilità che ogni notizia grossa abbia
+    # tutte e tre le colonne (sinistra, centro, destra).
+    MAX_ART = 450
     if len(articoli) > MAX_ART:
         prim = [a for a in articoli if a.get("primaria")]
         resto = [a for a in articoli if not a.get("primaria")]
@@ -328,8 +333,10 @@ def raggruppa(client, articoli, ore):
 
     dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=16000)
     print("  passo 1 raggruppamento: %d token in, %d out" % (uso.input_tokens, uso.output_tokens))
+    n_gruppi = len(dati.get("eventi", []))
+    print("  gruppi (2+ titoli) proposti dal modello: %d" % n_gruppi)
     if uso.output_tokens >= 15500:
-        print("  ATTENZIONE: risposta vicina al limite dei token, riduci ancora MAX_ART")
+        print("  ATTENZIONE: risposta ancora vicina al limite dei token")
 
     per_id = {a["id"]: a for a in articoli}
     eventi, usati = [], set()

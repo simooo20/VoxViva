@@ -272,9 +272,9 @@
       "name": "Corriere della Sera",
       "domain": "corriere.it",
       "area": "C",
-      "rss": "https://www.corriere.it/dynamic-feed/rss/section/Homepage.xml",
+      "rss": "https://xml2.corriereobjects.it/rss/homepage.xml",
       "proprieta": "RCS MediaGroup (Urbano Cairo)",
-      "stato": "ROTTO_url_da_trovare",
+      "stato": "da verificare (batch liste feed)",
       "nota": "Il vecchio url xml2.corriereobjects.it/rss/homepage.xml risponde ma restituisce articoli di MAGGIO 2024: feed congelato da due anni che non da' errore. Da non riusare."
     },
     {
@@ -460,9 +460,9 @@
       "name": "Il Dubbio",
       "domain": "ildubbio.news",
       "area": "C",
-      "rss": "",
+      "rss": "https://www.ildubbio.news/feed",
       "proprieta": "Unione Camere Penali Italiane",
-      "stato": "url_da_trovare",
+      "stato": "da verificare (batch liste feed)",
       "nota": "Simone/Wikipedia: area liberale/garantista, moderata. Quotidiano delle Camere penali: taglio giustizia e diritti, difficile da collocare sull'asse economico. Utile come voce di centro-garantista. Verifica il feed."
     },
     {
@@ -792,6 +792,72 @@
       "stato": "da verificare (batch liste feed)",
       "primaria": false,
       "nota": "esteri/geopolitica",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Il Gazzettino",
+      "domain": "ilgazzettino.it",
+      "area": "C",
+      "rss": "https://www.ilgazzettino.it/rss/home.xml",
+      "proprieta": "Caltagirone Editore",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Quotidiano del Nordest, gruppo Caltagirone (come Messaggero e Mattino). Generalista moderato.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "La Notizia",
+      "domain": "lanotiziagiornale.it",
+      "area": "CS",
+      "rss": "https://www.lanotiziagiornale.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Quotidiano vicino all'area 5 Stelle / centro-sinistra populista.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "L'Opinione",
+      "domain": "opinione.it",
+      "area": "CD",
+      "rss": "https://opinione.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Testata liberale di area centro-destra.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "La Discussione",
+      "domain": "ladiscussione.com",
+      "area": "C",
+      "rss": "https://ladiscussione.com/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Storico quotidiano di area moderata/centrista.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "L'Identita",
+      "domain": "lidentita.it",
+      "area": "CD",
+      "rss": "https://www.lidentita.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Quotidiano di area centro-destra.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "L'altravoce",
+      "domain": "laltravoce.com",
+      "area": "C",
+      "rss": "https://laltravoce.com/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "Testata generalista; orientamento da verificare, collocata provvisoriamente al centro.",
       "tipo": "giornale"
     }
   ]
