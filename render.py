@@ -100,18 +100,17 @@ GIORNI = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato",
 CSS = """
 *,*::before,*::after{box-sizing:border-box}
 :root{
-  /* palette: nero, arancione (accento del marchio), grigi. Testo scuro = leggibile. */
+  /* palette rigorosa: nero, grigi, sfondo grigio chiaro. UNICO colore: arancione. */
   --ink:#171717; --ink-2:#4d4d4d; --ink-3:#6f6f6f;
-  --line:#dedede; --line-2:#ececec; --bg:#ffffff; --card:#fff;
+  --line:#d3d3d3; --line-2:#e2e2e2; --bg:#e9e9e9; --card:#ffffff;
   --accent:#F25623; --accent-bg:#fdece4;
-  /* la scala: indaco cupo -> indaco chiaro -> ardesia -> ambra chiara -> ambra cupa.
-     Nessun colore di partito: in Italia rosso e azzurro direbbero l'opposto
-     della convenzione americana. */
-  --SR:#3535ad; --SR-bg:#eeeefc;
-  --CS:#7070d8; --CS-bg:#f3f3fd;
-  --C:#5c6877;  --C-bg:#f1f4f7;
-  --CD:#bd8420; --CD-bg:#fdf7e9;
-  --DR:#8d5308; --DR-bg:#fbf2e6;
+  /* niente altri colori: la scala è in grigi. A dire l'orientamento sono le
+     etichette, la posizione e il meter ARANCIONE (non colori diversi per lato). */
+  --SR:#171717; --SR-bg:#e3e3e3;
+  --CS:#4d4d4d; --CS-bg:#e8e8e8;
+  --C:#6f6f6f;  --C-bg:#ededed;
+  --CD:#4d4d4d; --CD-bg:#e8e8e8;
+  --DR:#171717; --DR-bg:#e3e3e3;
   /* direzione B: news digitale moderno, tutto sans. Space Grotesk per testata e
      titoli grossi, Inter per il resto. Niente serif (era la "faccia da AI"). */
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -178,8 +177,8 @@ main{padding:34px 0 10px}
 .seg{display:inline-flex;gap:2.5px}
 .seg i{width:13px;height:5px;border-radius:2px;background:var(--line);display:block}
 .seg i.on{background:var(--ink-2)}
-.d-alta .seg i.on{background:#9f2f28}
-.d-alta{color:#9f2f28}
+.d-alta .seg i.on{background:var(--accent)}
+.d-alta{color:var(--accent)}
 
 /* ---------- il duello ---------- */
 .duello{margin:18px 22px 4px;border:1px solid var(--line);border-radius:10px;
@@ -247,9 +246,9 @@ main{padding:34px 0 10px}
 .rc:first-child{padding-left:0} .rc:last-child{padding-right:0;border-right:0}
 .rc-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
   padding-bottom:8px;margin-bottom:11px;border-bottom:2px solid;display:block}
-.rc:nth-child(1) .rc-lbl{color:var(--CS);border-color:var(--CS)}
-.rc:nth-child(2) .rc-lbl{color:var(--C);border-color:var(--C)}
-.rc:nth-child(3) .rc-lbl{color:var(--CD);border-color:var(--CD)}
+.rc:nth-child(1) .rc-lbl{color:var(--ink);border-color:var(--accent)}
+.rc:nth-child(2) .rc-lbl{color:var(--ink);border-color:var(--accent)}
+.rc:nth-child(3) .rc-lbl{color:var(--ink);border-color:var(--accent)}
 .rc-tit{display:block;font-family:var(--serif);font-size:17px;line-height:1.34;color:var(--ink);
   font-weight:600;margin-bottom:10px}
 .rc-tit:hover{text-decoration:underline}
@@ -261,9 +260,7 @@ main{padding:34px 0 10px}
 /* meter L-C-R stile AllSides: 5 celle */
 .meter{display:inline-flex;gap:2px}
 .meter i{width:11px;height:11px;border-radius:2px;background:#e6e8ec;display:block}
-.meter i.on.m-SR{background:var(--SR)} .meter i.on.m-CS{background:var(--CS)}
-.meter i.on.m-C{background:var(--C)} .meter i.on.m-CD{background:var(--CD)}
-.meter i.on.m-DR{background:var(--DR)}
+.meter i.on{background:var(--accent)}   /* la cella accesa = arancione, mostra la posizione */
 
 @media(max-width:820px){
   .ru-cols{grid-template-columns:1fr;gap:0}
