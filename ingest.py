@@ -57,6 +57,32 @@ def scarica_feed(url):
     except Exception:
         return None
 
+
+def immagine_di(e):
+    """URL di un'immagine dall'entry del feed (media, enclosure o <img> nel testo).
+    Serve per l'apertura in stile AllSides; stringa vuota se non c'e'."""
+    for chiave in ("media_content", "media_thumbnail"):
+        for m in (e.get(chiave) or []):
+            u = m.get("url") or ""
+            if u.startswith("http"):
+                return u
+    for enc in (e.get("enclosures") or []):
+        u = enc.get("href") or enc.get("url") or ""
+        tipo = (enc.get("type") or "").lower()
+        if u.startswith("http") and ("image" in tipo or u.lower().split("?")[0].endswith(
+                (".jpg", ".jpeg", ".png", ".webp", ".gif"))):
+            return u
+    testo = e.get("summary") or ""
+    if not testo and e.get("content"):
+        try:
+            testo = e["content"][0].get("value", "")
+        except Exception:
+            testo = ""
+    m = re.search(r'<img[^>]+src=["\']([^"\']+)', testo, re.I)
+    if m and m.group(1).startswith("http"):
+        return m.group(1)
+    return ""
+
 # parametri di tracciamento che sporcano gli url e rompono la deduplica
 TRACKING = re.compile(r"^(utm_|fbclid|gclid|ref|refresh_ce|__twitter|mc_|igshid|amp)", re.I)
 
@@ -205,6 +231,7 @@ def main():
                 "area": area,
                 "primaria": primaria,           # viene da un feed che definisce l'agenda del giorno
                 "ordine_feed": pos,             # posizione nel feed = priorita' redazionale dell'agenzia
+                "immagine": immagine_di(e),     # per l'apertura stile AllSides
             })
             presi += 1
 

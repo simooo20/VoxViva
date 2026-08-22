@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -71,7 +72,9 @@ def leggi_incipit(url, max_chars=700):
     return _re.sub(r"\s+", " ", testo).strip()[:max_chars]
 OUT = BASE / "data" / "events.json"
 
-MODELLO = os.environ.get("ILVAGLIO_MODEL", "claude-sonnet-4-5")
+# Modalità economica: Haiku costa ~4-5 volte meno di Sonnet. Si puo' cambiare
+# senza toccare il codice, con la variabile ILVAGLIO_MODEL nel repo.
+MODELLO = os.environ.get("ILVAGLIO_MODEL", "claude-haiku-4-5")
 
 SCHEMA_RAGGRUPPA = {
     "name": "registra_eventi",
@@ -274,18 +277,32 @@ def client_anthropic():
     return anthropic.Anthropic()
 
 
-def chiama(client, prompt, schema, max_tokens=16000):
-    risposta = client.messages.create(
-        model=MODELLO,
-        max_tokens=max_tokens,
-        tools=[schema],
-        tool_choice={"type": "tool", "name": schema["name"]},
-        messages=[{"role": "user", "content": prompt}],
-    )
-    for blocco in risposta.content:
-        if blocco.type == "tool_use":
-            return blocco.input, risposta.usage
-    raise RuntimeError("Il modello non ha chiamato lo strumento.")
+def chiama(client, prompt, schema, max_tokens=16000, tentativi=4):
+    # L'API ogni tanto risponde con un errore momentaneo (sovraccarico, limite,
+    # timeout): non deve buttare giu' l'intero giro. Riproviamo qualche volta con
+    # attesa crescente prima di arrenderci.
+    ultimo = None
+    for i in range(tentativi):
+        try:
+            risposta = client.messages.create(
+                model=MODELLO,
+                max_tokens=max_tokens,
+                tools=[schema],
+                tool_choice={"type": "tool", "name": schema["name"]},
+                messages=[{"role": "user", "content": prompt}],
+            )
+            for blocco in risposta.content:
+                if blocco.type == "tool_use":
+                    return blocco.input, risposta.usage
+            raise RuntimeError("Il modello non ha chiamato lo strumento.")
+        except Exception as exc:
+            ultimo = exc
+            if i < tentativi - 1:
+                attesa = 5 * (i + 1)
+                print("  chiamata al modello fallita (tentativo %d/%d): %s "
+                      "— riprovo tra %ds" % (i + 1, tentativi, str(exc)[:120], attesa))
+                time.sleep(attesa)
+    raise ultimo
 
 
 def raggruppa(client, articoli, ore):
@@ -293,7 +310,7 @@ def raggruppa(client, articoli, ore):
     # articoli la risposta supera il limite di token e viene tagliata a meta',
     # cosi' il raggruppamento fallisce e ogni articolo resta un evento a se'.
     # Teniamo le notizie in agenda (primaria) e le piu' recenti, fino a un tetto.
-    MAX_ART = 400
+    MAX_ART = 300
     if len(articoli) > MAX_ART:
         prim = [a for a in articoli if a.get("primaria")]
         resto = [a for a in articoli if not a.get("primaria")]
@@ -465,7 +482,8 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
     # troppo il giro.
     blocchi = []
     letti = 0
-    MAX_LETTURE = 60
+    MAX_LETTURE = 0    # modalità economica "solo titoli": non leggo il corpo degli articoli
+                       # (metti 8-10 per riattivare la lettura sui confronti in cima)
     cache_incipit = {}
     for n, (_, ev) in enumerate(candidati, 1):
         righe = ["Evento %d - %s" % (n, ev["titolo_neutro"])]
@@ -500,7 +518,7 @@ def main():
     ap.add_argument("--no-verifica", action="store_true",
                     help="salta il controllo che caccia gli intrusi dai gruppi (sconsigliato)")
     ap.add_argument("--no-analisi", action="store_true", help="salta il passo 2")
-    ap.add_argument("--analizza", type=int, default=14, help="quanti eventi analizzare (default 14)")
+    ap.add_argument("--analizza", type=int, default=8, help="quanti eventi analizzare (default 8, economia)")
     args = ap.parse_args()
 
     if not IN.exists():
@@ -515,10 +533,16 @@ def main():
 
     eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))
     if not args.no_verifica:
-        eventi = verifica(client, eventi)
+        try:
+            eventi = verifica(client, eventi)
+        except Exception as exc:
+            print("  verifica saltata per un errore momentaneo: %s" % str(exc)[:150])
     eventi = arricchisci(eventi)
     if not args.no_analisi:
-        analizza(client, eventi, args.analizza)
+        try:
+            analizza(client, eventi, args.analizza)
+        except Exception as exc:
+            print("  analisi saltata per un errore momentaneo: %s" % str(exc)[:150])
 
     principali = [e for e in eventi if e.get("principale")]
     duelli = [e for e in eventi if e["ampiezza"] >= 2]

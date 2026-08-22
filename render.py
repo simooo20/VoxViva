@@ -100,8 +100,10 @@ GIORNI = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato",
 CSS = """
 *,*::before,*::after{box-sizing:border-box}
 :root{
-  --ink:#16181d; --ink-2:#474c57; --ink-3:#787e8c;
-  --line:#e3e5ea; --line-2:#eef0f3; --bg:#fbfbfc; --card:#fff;
+  /* palette: nero, arancione (accento del marchio), grigi. Testo scuro = leggibile. */
+  --ink:#171717; --ink-2:#4d4d4d; --ink-3:#6f6f6f;
+  --line:#dedede; --line-2:#ececec; --bg:#ffffff; --card:#fff;
+  --accent:#F25623; --accent-bg:#fdece4;
   /* la scala: indaco cupo -> indaco chiaro -> ardesia -> ambra chiara -> ambra cupa.
      Nessun colore di partito: in Italia rosso e azzurro direbbero l'opposto
      della convenzione americana. */
@@ -110,25 +112,31 @@ CSS = """
   --C:#5c6877;  --C-bg:#f1f4f7;
   --CD:#bd8420; --CD-bg:#fdf7e9;
   --DR:#8d5308; --DR-bg:#fbf2e6;
-  --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  /* direzione B: news digitale moderno, tutto sans. Space Grotesk per testata e
+     titoli grossi, Inter per il resto. Niente serif (era la "faccia da AI"). */
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --display:"Space Grotesk","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
   font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+/* firma visiva: striscia arancione del marchio in cima alla pagina */
+body::before{content:"";display:block;height:4px;background:var(--accent)}
 .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 a{color:inherit;text-decoration:none}
+a:hover{color:var(--accent)}
 
 /* ---------- testata ---------- */
 header.top{background:var(--card);border-bottom:1px solid var(--line);padding:38px 0 30px}
 .brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.brand h1{font-family:var(--serif);font-size:40px;line-height:1;margin:0;letter-spacing:-.02em}
+.brand h1{font-family:var(--display);font-weight:700;font-size:46px;line-height:.95;margin:0;letter-spacing:-.035em}
 .brand .tag{font-size:14px;color:var(--ink-3)}
 .claim{font-family:var(--serif);font-size:20px;line-height:1.45;color:var(--ink-2);
   margin:18px 0 0;max-width:64ch}
 .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 .stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:92px}
-.stat b{display:block;font-size:22px;font-family:var(--serif);line-height:1.1}
+.stat b{display:block;font-size:23px;font-family:var(--display);font-weight:700;line-height:1.1;letter-spacing:-.02em}
 .stat span{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
 
 /* legenda della scala */
@@ -152,7 +160,7 @@ main{padding:34px 0 10px}
 .sezione-tit{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
   margin:40px 0 8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
 .sezione-tit:first-child{margin-top:0}
-.sezione-sub{font-size:13.5px;color:var(--ink-3);margin:0 0 18px;max-width:78ch}
+.sezione-sub{font-size:14px;color:var(--ink-2);margin:0 0 18px;max-width:78ch;line-height:1.5}
 .evento{background:var(--card);border:1px solid var(--line);border-radius:12px;
   margin-bottom:22px;overflow:hidden}
 .ev-head{padding:19px 22px 0}
@@ -160,10 +168,10 @@ main{padding:34px 0 10px}
 .tema{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);
   border:1px solid var(--line);border-radius:20px;padding:2px 9px;white-space:nowrap}
 .prima{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;
-  color:var(--C);background:var(--C-bg);border:1px solid var(--C-line,#cfd7e0);
+  color:#fff;background:var(--accent);border:1px solid var(--accent);
   border-radius:20px;padding:2px 10px;white-space:nowrap}
-.ev-head h2{font-family:var(--serif);font-size:24px;line-height:1.25;margin:0;
-  letter-spacing:-.01em;font-weight:600}
+.ev-head h2{font-family:var(--display);font-size:24px;line-height:1.22;margin:0;
+  letter-spacing:-.02em;font-weight:600}
 
 .div-badge{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;
   text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
@@ -218,11 +226,21 @@ main{padding:34px 0 10px}
 .roundup{background:var(--card);border:1px solid var(--line);border-radius:12px;
   margin-bottom:22px;overflow:hidden;padding:20px 22px 8px}
 .ru-head{padding-bottom:14px;border-bottom:1px solid var(--line-2);margin-bottom:16px}
+.ru-head-img{display:flex;gap:18px;align-items:flex-start}
+.ru-thumb{flex:0 0 210px;max-width:210px}
+.ru-thumb img{width:100%;height:132px;object-fit:cover;border-radius:8px;display:block;
+  background:var(--line-2);border:1px solid var(--line)}
+.ru-headtext{flex:1;min-width:0}
+@media(max-width:600px){
+  .ru-head-img{flex-direction:column}
+  .ru-thumb{flex-basis:auto;max-width:100%;width:100%}
+  .ru-thumb img{height:190px}
+}
 .ru-kicker{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
 .ru-tema{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
   font-weight:700}
-.ru-head h2{font-family:var(--serif);font-size:25px;line-height:1.22;margin:0;
-  letter-spacing:-.01em;font-weight:600}
+.ru-head h2{font-family:var(--display);font-size:26px;line-height:1.18;margin:0;
+  letter-spacing:-.02em;font-weight:600}
 .ru-sint{margin:11px 0 0;font-size:15px;line-height:1.5;color:var(--ink-2);font-family:var(--serif)}
 .ru-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
 .rc{padding:0 20px;border-right:1px solid var(--line-2);min-width:0}
@@ -236,8 +254,8 @@ main{padding:34px 0 10px}
   font-weight:600;margin-bottom:10px}
 .rc-tit:hover{text-decoration:underline}
 .rc-src{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rc-fonte{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);
-  font-weight:600}
+.rc-fonte{font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2);
+  font-weight:700}
 .rc-altre{font-size:12px;color:var(--ink-3);margin-top:8px;line-height:1.4}
 .rc-vuoto{font-size:13px;color:var(--ink-3);font-style:italic;line-height:1.4}
 /* meter L-C-R stile AllSides: 5 celle */
@@ -252,6 +270,10 @@ main{padding:34px 0 10px}
   .rc{padding:16px 0;border-right:0;border-bottom:1px solid var(--line-2)}
   .rc:last-child{border-bottom:0}
   .ru-head h2{font-size:22px}
+  /* su mobile diamo alla nota e alla rassegna tutta la larghezza, prima erano strette */
+  .roundup{padding-left:15px;padding-right:15px}
+  .nota{margin-left:0;margin-right:0}
+  .duello,.nota{margin-left:14px;margin-right:14px}
 }
 
 /* ---------- tutte le testate ---------- */
@@ -417,8 +439,12 @@ def altre_di(ev, chiave, rep):
 
 def blocco_evento(ev, con_colonne=True):
     sx, rif, dx = rappresentanti(ev)
-    p = ['<article class="roundup">', '<div class="ru-head">']
-
+    img = next((a.get("immagine") for a in ev["articoli"] if a.get("immagine")), "")
+    p = ['<article class="roundup">']
+    p.append('<div class="ru-head%s">' % (" ru-head-img" if img else ""))
+    if img:
+        p.append('<div class="ru-thumb"><img src="%s" loading="lazy" alt=""></div>' % e(img))
+    p.append('<div class="ru-headtext">')
     p.append('<div class="ru-kicker">')
     if ev.get("principale"):
         p.append('<span class="prima">in prima pagina</span> ')
@@ -431,6 +457,7 @@ def blocco_evento(ev, con_colonne=True):
     p.append("<h2>%s</h2>" % e(ev["titolo_neutro"]))
     if ev.get("duello"):
         p.append('<p class="ru-sint">%s</p>' % e(ev["duello"]))
+    p.append('</div>')
     p.append("</div>")
 
     csx, ccen, cdes = ETICHETTE_COLONNE
@@ -506,6 +533,26 @@ def main():
     altri = sorted([ev for ev in completi if id(ev) not in gia],
                    key=lambda e: (e["ampiezza"], e["totale"]), reverse=True)[: args.max]
 
+    # RETE DI SICUREZZA: se in questo momento NESSUNA notizia e' coperta da tutte
+    # e tre le aree (capita: il raggruppamento varia di giro in giro), invece di
+    # lasciare la pagina vuota mostriamo i confronti piu' vicini, con almeno due
+    # voci su tre. Cosi' il sito non e' mai vuoto. Quando i confronti completi ci
+    # sono, questa sezione non compare e vale la regola stretta a tre colonne.
+    def n_colonne(ev):
+        return sum(1 for k in ("sinistra", "centro", "destra") if ev["per_colonna"].get(k))
+
+    # OBIETTIVO: almeno ~10 confronti in pagina. Se i completi non bastano, li
+    # completiamo con i migliori parziali (due voci su tre), i piu' larghi prima.
+    OBIETTIVO = 10
+    mostrati = len(principali) + len(altri)
+    gia_ids = {id(ev) for ev in principali} | {id(ev) for ev in altri}
+    parziali = []
+    if mostrati < OBIETTIVO:
+        parziali = sorted(
+            [ev for ev in eventi if id(ev) not in gia_ids and n_colonne(ev) >= 2],
+            key=lambda e: (n_colonne(e), e["ampiezza"], e["totale"]),
+            reverse=True)[: OBIETTIVO - mostrati]
+
     # punti ciechi: solo se richiesti esplicitamente (--punti-ciechi). Di default,
     # per la regola di Simone, le notizie senza le tre colonne non si pubblicano.
     ciechi = []
@@ -527,6 +574,11 @@ def main():
         corpo.append('<p class="sezione-sub">Notizie fuori dall\'agenda del giorno, ma pur sempre '
                      'coperte da sinistra, centro e destra.</p>')
         corpo += [blocco_evento(ev) for ev in altri]
+    if parziali:
+        corpo.append('<div class="sezione-tit">Confronti in costruzione</div>')
+        corpo.append('<p class="sezione-sub">Notizie riprese finora da due delle tre aree: '
+                     'si completano man mano che anche il terzo lato le titola.</p>')
+        corpo += [blocco_evento(ev) for ev in parziali]
     if ciechi:
         corpo.append('<div class="sezione-tit">Punti ciechi</div>')
         corpo.append('<p class="sezione-sub">Notizie battute da una sola delle tre aree. Non entrano '
@@ -535,7 +587,7 @@ def main():
         corpo += [blocco_cieco(ev) for ev in ciechi]
 
     stat = [
-        (len(principali) + len(altri), "confronti<br>pubblicati"),
+        (len(principali) + len(altri) + len(parziali), "confronti<br>pubblicati"),
         (len(principali), "in prima<br>pagina"),
         (scartati_incompleti, "scartati<br>(manca un lato)"),
         (d.get("totale_articoli", 0), "titoli letti"),
@@ -567,6 +619,9 @@ def main():
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VoxViva &mdash; la stessa notizia, da un estremo all'altro</title>
 <meta name="description" content="Come la stessa notizia italiana viene titolata dalla sinistra radicale alla destra radicale. Aggiornato ogni giorno.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 %(ga)s%(adsense)s<style>%(css)s</style>
 </head>
 <body>
