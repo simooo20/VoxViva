@@ -10,12 +10,12 @@
 name: Aggiorna VoxViva
 
 on:
-  # MODALITA' ECONOMICA: 4 giri al giorno, alle 00:00 / 06:00 / 12:00 / 18:00
-  # ORA ITALIANA (estate). GitHub usa UTC, quindi qui sono 22/04/10/16.
-  # In inverno (ora solare) scaleranno di un'ora in Italia: 23/05/11/17. Va bene lo stesso.
-  # Per cambiare cadenza: "0 22,4,10,16 * * *" = 4 volte | "0 */3 * * *" = ogni 3h.
+  # MODALITA' ECONOMICA: 3 giri al giorno (ogni 8 ore), alle 00:00 / 08:00 / 16:00
+  # ORA ITALIANA (estate). GitHub usa UTC, quindi qui sono 22 / 06 / 14.
+  # In inverno (ora solare) scaleranno di un'ora in Italia. Va bene lo stesso.
+  # Per cambiare: "0 22,6,14 * * *" = ogni 8h | "0 22,4,10,16 * * *" = ogni 6h.
   schedule:
-    - cron: "0 22,4,10,16 * * *"
+    - cron: "0 22,6,14 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
 
