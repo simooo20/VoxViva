@@ -10,12 +10,12 @@
 name: Aggiorna VoxViva
 
 on:
-  # MODALITA' ECONOMICA: ogni 3 ore (8 giri al giorno) invece di ogni 30 minuti.
-  # Le notizie non cambiano ogni mezz'ora, e cosi' il costo scende molto.
-  # Per cambiare: "0 */3 * * *" = ogni 3h | "0 */6 * * *" = ogni 6h (piu' economico)
-  #              "0 * * * *" = ogni ora | "*/30 * * * *" = ogni 30 min (piu' caro)
+  # MODALITA' ECONOMICA: 4 giri al giorno, alle 00:00 / 06:00 / 12:00 / 18:00
+  # ORA ITALIANA (estate). GitHub usa UTC, quindi qui sono 22/04/10/16.
+  # In inverno (ora solare) scaleranno di un'ora in Italia: 23/05/11/17. Va bene lo stesso.
+  # Per cambiare cadenza: "0 22,4,10,16 * * *" = 4 volte | "0 */3 * * *" = ogni 3h.
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 22,4,10,16 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
 
