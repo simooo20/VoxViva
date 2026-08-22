@@ -47,9 +47,9 @@
       "name": "Il Manifesto",
       "domain": "ilmanifesto.it",
       "area": "SR",
-      "rss": "https://cms.ilmanifesto.it/feed",
+      "rss": "https://ilmanifesto.it/feed/",
       "proprieta": "cooperativa di giornalisti",
-      "stato": "attenzione_feed_cartaceo",
+      "stato": "url aggiornato",
       "nota": "Si autodefinisce 'quotidiano comunista' nella descrizione del feed. Il feed disponibile contiene l'edizione cartacea (cultura, spettacoli) con 1-2 giorni di ritardo: per il confronto sui titoli del giorno serve un feed di cronaca. cms.ilmanifesto.it/sezione/politica/feed esiste ma torna vuoto."
     },
     {
@@ -84,7 +84,7 @@
       "area": "CS",
       "rss": "https://www.ilfattoquotidiano.it/feed/",
       "proprieta": "Editoriale Il Fatto",
-      "stato": "bloccato_da_datacenter",
+      "stato": "url aggiornato da liste feed",
       "nota": "Collocazione discussa: giustizialista e antiestablishment piu' che di sinistra classica, storicamente vicino al M5S. In CS per convenzione, ma su temi come giustizia e magistratura si allinea spesso in modo trasversale. Affinita' (Simone): sinistra, area Movimento 5 Stelle. Wikipedia: sinistra / populismo di sinistra."
     },
     {
@@ -99,9 +99,9 @@
       "name": "L'Espresso",
       "domain": "lespresso.it",
       "area": "CS",
-      "rss": "https://lespresso.it/feed",
+      "rss": "https://espresso.repubblica.it/rss?sezione=espresso",
       "proprieta": "BFC Media (Denis Masetti), prima GEDI",
-      "stato": "ok"
+      "stato": "url aggiornato"
     },
     {
       "name": "L'Unita",
@@ -150,9 +150,9 @@
       "name": "Internazionale",
       "domain": "internazionale.it",
       "area": "CS",
-      "rss": "https://www.internazionale.it/feed",
+      "rss": "https://www.internazionale.it/sitemaps/rss.xml",
       "proprieta": "Internazionale spa",
-      "stato": "da_verificare",
+      "stato": "url aggiornato da liste feed",
       "nota": "Traduce e seleziona stampa estera: non titola sulla cronaca italiana del giorno. Utile per gli esteri, quasi mai per i confronti interni."
     },
     {
@@ -362,9 +362,9 @@
       "name": "Il Giornale",
       "domain": "ilgiornale.it",
       "area": "CD",
-      "rss": "",
+      "rss": "https://www.ilgiornale.it/feed.xml",
       "proprieta": "famiglia Angelucci dal 2023, prima famiglia Berlusconi",
-      "stato": "ROTTO_url_da_trovare",
+      "stato": "url aggiornato da liste feed",
       "nota": "Nessun url funzionante trovato: /rss.xml, /feed/, /feed.xml, /feed.rss, /rss/home.xml, /rss/politica.xml danno tutti 404. Da cercare a mano nel sorgente della homepage (application/rss+xml). Manca una delle testate piu' importanti della colonna destra. Affinita' (Simone): destra, area Forza Italia (ma dal 2023 proprieta' Angelucci)."
     },
     {
@@ -373,7 +373,7 @@
       "area": "DR",
       "rss": "https://www.liberoquotidiano.it/rss.xml",
       "proprieta": "famiglia Angelucci",
-      "stato": "timeout_riprovare",
+      "stato": "url aggiornato da liste feed",
       "nota": "Simone/Wikipedia: destra radicale / populista di destra. Spostato da CD a DR. Proprieta' famiglia Angelucci. "
     },
     {
@@ -382,7 +382,7 @@
       "area": "CD",
       "rss": "https://www.iltempo.it/rss.xml",
       "proprieta": "famiglia Angelucci, gruppo Toto al 40% dal 2025",
-      "stato": "ok",
+      "stato": "url aggiornato da liste feed",
       "nota": "Il vecchio /rss/home.xml dava 404, questo funziona. Affinita' (Simone): destra, area Forza Italia (proprieta' Angelucci, gruppo Toto al 40%). Wikipedia: destra / destra radicale. Tenuto a CD ma e' un confine con DR: meno movimentista di La Verita'/Porro, per questo CD."
     },
     {
@@ -715,6 +715,83 @@
       "stato": "da verificare (batch feed aperti)",
       "primaria": false,
       "nota": "nativo digitale",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Affaritaliani",
+      "domain": "affaritaliani.it",
+      "area": "C",
+      "rss": "https://www.affaritaliani.it/rss/rss-affaritaliani.html",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "generalista",
+      "tipo": "giornale"
+    },
+    {
+      "name": "LaVoce.info",
+      "domain": "lavoce.info",
+      "area": "C",
+      "rss": "https://feeds.feedburner.com/lavoce/kNav",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "analisi economica",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Blitzquotidiano",
+      "domain": "blitzquotidiano.it",
+      "area": "C",
+      "rss": "https://www.blitzquotidiano.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "generalista popolare",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Nanopress",
+      "domain": "nanopress.it",
+      "area": "C",
+      "rss": "https://www.nanopress.it/feed-rss/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "generalista",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Forbes Italia",
+      "domain": "forbes.it",
+      "area": "CD",
+      "rss": "https://forbes.it/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "economico",
+      "tipo": "giornale"
+    },
+    {
+      "name": "ZENIT",
+      "domain": "zenit.org",
+      "area": "C",
+      "rss": "https://zenit.org/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "cattolico/istituzionale",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Notizie Geopolitiche",
+      "domain": "notiziegeopolitiche.net",
+      "area": "C",
+      "rss": "https://www.notiziegeopolitiche.net/feed/",
+      "proprieta": "",
+      "stato": "da verificare (batch liste feed)",
+      "primaria": false,
+      "nota": "esteri/geopolitica",
       "tipo": "giornale"
     }
   ]

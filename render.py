@@ -538,17 +538,12 @@ def main():
     def n_colonne(ev):
         return sum(1 for k in ("sinistra", "centro", "destra") if ev["per_colonna"].get(k))
 
-    # OBIETTIVO: almeno ~10 confronti in pagina. Se i completi non bastano, li
-    # completiamo con i migliori parziali (due voci su tre), i piu' larghi prima.
-    OBIETTIVO = 10
-    mostrati = len(principali) + len(altri)
-    gia_ids = {id(ev) for ev in principali} | {id(ev) for ev in altri}
+    # REGOLA STRETTA: si pubblicano SOLO i confronti con tutte e tre le colonne
+    # piene. Mai un confronto monco: mostrerebbe "nessuna testata di quest'area ha
+    # battuto la notizia", che è FALSO — la notizia c'è, siamo noi a non avere quel
+    # feed. Per avere sempre tanti confronti la strada è avere PIÙ FEED, non
+    # abbassare l'asticella pubblicando versioni incomplete.
     parziali = []
-    if mostrati < OBIETTIVO:
-        parziali = sorted(
-            [ev for ev in eventi if id(ev) not in gia_ids and n_colonne(ev) >= 2],
-            key=lambda e: (n_colonne(e), e["ampiezza"], e["totale"]),
-            reverse=True)[: OBIETTIVO - mostrati]
 
     # punti ciechi: solo se richiesti esplicitamente (--punti-ciechi). Di default,
     # per la regola di Simone, le notizie senza le tre colonne non si pubblicano.
