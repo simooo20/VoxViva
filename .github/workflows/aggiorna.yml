@@ -1,15 +1,31 @@
+# Il Vaglio — aggiornamento automatico del sito
+#
+# Cosa fa: ogni 30 minuti (e ogni volta che lo lanci a mano) rigira la
+# pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce
+# la pagina — e pubblica il risultato su GitHub Pages.
+#
+# Il visitatore vede sempre un sito normale, sempre aggiornato: il lavoro
+# avviene qui dietro, non sul suo schermo.
+
 name: Aggiorna VoxViva
 
 on:
+  # MODALITA' ECONOMICA: ogni 3 ore (8 giri al giorno) invece di ogni 30 minuti.
+  # Le notizie non cambiano ogni mezz'ora, e cosi' il costo scende molto.
+  # Per cambiare: "0 */3 * * *" = ogni 3h | "0 */6 * * *" = ogni 6h (piu' economico)
+  #              "0 * * * *" = ogni ora | "*/30 * * * *" = ogni 30 min (piu' caro)
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "0 */3 * * *"
+  # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
 
+# permessi minimi per pubblicare su Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# se parte un nuovo giro mentre il precedente non ha finito, l'ultimo vince
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -20,6 +36,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
       - name: Scarica il codice
         uses: actions/checkout@v4
@@ -35,7 +52,8 @@ jobs:
       - name: Rigenera la pagina
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-sonnet-4-5' }}
+          # opzionale: cambia il modello senza toccare il codice
+          ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
         run: |
           python ingest.py --ore 24
           python cluster.py
