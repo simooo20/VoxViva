@@ -36,7 +36,7 @@ ETICHETTE_COLONNE = ("Dai progressisti", "Dai moderati", "Dai conservatori")
 # INTEGRAZIONI: analytics, pubblicita', contatore. Incolla qui i tuoi ID e si
 # accendono da soli. Lasciali vuoti e restano spazi grigi "segnaposto".
 # ---------------------------------------------------------------------------
-GA_ID = ""            # Google Analytics 4, es. "G-XXXXXXX"  (console analytics.google.com)
+GA_ID = "G-LJQ34SBPYH"  # Google Analytics 4 (console analytics.google.com)
 ADSENSE_CLIENT = ""   # Google AdSense, es. "ca-pub-1234567890123456"
 ADSENSE_SLOTS = {     # gli id degli slot creati in AdSense, uno per posizione
     "leaderboard": "",   # banner largo sotto la testata
