@@ -30,7 +30,7 @@ OUT = BASE / "web" / "index.html"
 # Nomi delle tre colonne del confronto. Cambiali qui per rinominarle ovunque.
 # Alternative pronte: ("Dalla sinistra","Dal centro","Dalla destra") oppure
 # ("Area progressista","Area moderata","Area conservatrice").
-ETICHETTE_COLONNE = ("Dai progressisti", "Dai moderati", "Dai conservatori")
+ETICHETTE_COLONNE = ("Sinistra", "Centro", "Destra")
 
 # ---------------------------------------------------------------------------
 # INTEGRAZIONI: analytics, pubblicita', contatore. Incolla qui i tuoi ID e si

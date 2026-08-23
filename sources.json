@@ -99,9 +99,9 @@
       "name": "L'Espresso",
       "domain": "lespresso.it",
       "area": "CS",
-      "rss": "https://espresso.repubblica.it/rss?sezione=espresso",
+      "rss": "https://lespresso.it/feed",
       "proprieta": "BFC Media (Denis Masetti), prima GEDI",
-      "stato": "url aggiornato"
+      "stato": "ok (feed nuovo lespresso.it, verificato 22/08)"
     },
     {
       "name": "L'Unita",
@@ -858,6 +858,61 @@
       "stato": "da verificare (batch liste feed)",
       "primaria": false,
       "nota": "Testata generalista; orientamento da verificare, collocata provvisoriamente al centro.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "MicroMega",
+      "domain": "micromega.net",
+      "area": "SR",
+      "rss": "https://www.micromega.net/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 23/08)",
+      "primaria": false,
+      "nota": "Rivista di sinistra intellettuale/radicale, molto schierata. Politica e cultura.",
+      "tipo": "rivista"
+    },
+    {
+      "name": "Globalist",
+      "domain": "globalist.it",
+      "area": "CS",
+      "rss": "https://www.globalist.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 23/08)",
+      "primaria": false,
+      "nota": "Quotidiano online progressista, schierato a sinistra.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "TPI",
+      "domain": "tpi.it",
+      "area": "CS",
+      "rss": "https://www.tpi.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 23/08)",
+      "primaria": false,
+      "nota": "The Post Internazionale: taglio progressista/populista di sinistra. Molto materiale, anche soft news.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Il Sussidiario",
+      "domain": "ilsussidiario.net",
+      "area": "CD",
+      "rss": "https://www.ilsussidiario.net/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 23/08)",
+      "primaria": false,
+      "nota": "Area Comunione e Liberazione, moderato/centro-destra. Schierato.",
+      "tipo": "giornale"
+    },
+    {
+      "name": "Tempi",
+      "domain": "tempi.it",
+      "area": "CD",
+      "rss": "https://www.tempi.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 23/08)",
+      "primaria": false,
+      "nota": "Settimanale/online cattolico-conservatore, chiaramente schierato.",
       "tipo": "giornale"
     }
   ]

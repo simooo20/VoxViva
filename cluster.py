@@ -76,6 +76,12 @@ OUT = BASE / "data" / "events.json"
 # senza toccare il codice, con la variabile ILVAGLIO_MODEL nel repo.
 MODELLO = os.environ.get("ILVAGLIO_MODEL", "claude-haiku-4-5")
 
+# Il raggruppamento e' il passo difficile (capire che la STESSA notizia e'
+# titolata con parole diverse da sinistra e da destra): qui usiamo un modello
+# piu' forte. Verifica e analisi restano su MODELLO (Haiku) per contenere la
+# spesa. Si cambia senza toccare il codice con ILVAGLIO_MODEL_RAGGRUPPA.
+MODELLO_RAGGRUPPA = os.environ.get("ILVAGLIO_MODEL_RAGGRUPPA", "claude-sonnet-4-5")
+
 SCHEMA_RAGGRUPPA = {
     "name": "registra_eventi",
     "description": "Registra gli eventi trovati raggruppando i titoli.",
@@ -89,7 +95,7 @@ SCHEMA_RAGGRUPPA = {
                     "properties": {
                         "titolo_neutro": {
                             "type": "string",
-                            "description": "Come descriverebbe l'evento un'agenzia di stampa: fatto, luogo, attori. Massimo 90 caratteri, nessun aggettivo valutativo, nessuna virgoletta di dichiarazione.",
+                            "description": "Una TUA sintesi neutra dell'evento (fatto, luogo, attori), scritta con parole tue. NON ricopiare nessuno dei titoli del gruppo, e in particolare NON il lancio d'agenzia (ANSA/AGI) del centro: deve essere una formulazione DIVERSA da tutti i titoli presenti, non la stessa frase. Massimo 90 caratteri, nessun aggettivo valutativo, nessuna virgoletta di dichiarazione.",
                         },
                         "fatto_specifico": {
                             "type": "string",
@@ -141,7 +147,7 @@ Non guardare le parole in comune: guarda di quale fatto si parla.
 Regole formali (IMPORTANTISSIME):
 - Riporta SOLO i gruppi con DUE O PIÙ titoli. I titoli che restano da soli NON vanno riportati: ci pensa il programma a tenerli come eventi singoli. Non elencare i singoli, non riempire la risposta ripetendo id già soli. Riporta esclusivamente gli accostamenti che hai trovato: così la risposta resta corta e non viene tagliata a metà.
 - Ogni id compare in un solo gruppo.
-- Il titolo_neutro lo scrivi tu, asciutto come un lancio d'agenzia. Non copiare il titolo di nessuna testata e non usarne le parole cariche.
+- Il titolo_neutro lo scrivi tu, asciutto ma con parole TUE. Non ricopiare il titolo di nessuna testata — men che meno quello dell'agenzia/centro — e non usarne le parole cariche: è la riga grande in cima al confronto e deve essere DIVERSA dai titoli mostrati sotto, non la stessa frase del centro.
 
 Titoli:
 
@@ -277,7 +283,7 @@ def client_anthropic():
     return anthropic.Anthropic()
 
 
-def chiama(client, prompt, schema, max_tokens=16000, tentativi=4):
+def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
     # L'API ogni tanto risponde con un errore momentaneo (sovraccarico, limite,
     # timeout): non deve buttare giu' l'intero giro. Riproviamo qualche volta con
     # attesa crescente prima di arrenderci.
@@ -285,7 +291,7 @@ def chiama(client, prompt, schema, max_tokens=16000, tentativi=4):
     for i in range(tentativi):
         try:
             risposta = client.messages.create(
-                model=MODELLO,
+                model=modello or MODELLO,
                 max_tokens=max_tokens,
                 tools=[schema],
                 tool_choice={"type": "tool", "name": schema["name"]},
@@ -331,8 +337,8 @@ def raggruppa(client, articoli, ore):
         righe.append("%s [%s, %s] %s" % (a["id"], a["fonte"], ora, a["titolo"]))
     prompt = PROMPT_RAGGRUPPA.format(ore=ore, titoli="\n".join(righe))
 
-    dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=16000)
-    print("  passo 1 raggruppamento: %d token in, %d out" % (uso.input_tokens, uso.output_tokens))
+    dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=16000, modello=MODELLO_RAGGRUPPA)
+    print("  passo 1 raggruppamento (%s): %d token in, %d out" % (MODELLO_RAGGRUPPA, uso.input_tokens, uso.output_tokens))
     n_gruppi = len(dati.get("eventi", []))
     print("  gruppi (2+ titoli) proposti dal modello: %d" % n_gruppi)
     if uso.output_tokens >= 15500:
@@ -560,6 +566,7 @@ def main():
         "generato": datetime.now(timezone.utc).isoformat(),
         "finestra_ore": dati.get("finestra_ore", 24),
         "modello": MODELLO,
+        "modello_raggruppa": MODELLO_RAGGRUPPA,
         "totale_articoli": len(articoli),
         "per_area": dati.get("per_area", {}),
         "testate_attive": sorted({a["fonte"] for a in articoli}),
