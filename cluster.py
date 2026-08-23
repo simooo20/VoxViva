@@ -333,7 +333,10 @@ def raggruppa(client, articoli, ore):
     # sette-otto sezioni): e' quello che si puo' tagliare senza danno, perche' il
     # centro non manca quasi mai. Quindi teniamo SEMPRE tutti i lati + l'agenda,
     # e riempiamo il resto del tetto con il centro piu' recente.
-    MAX_ART = 550
+    # Tetto alto: teniamo tutti i lati E abbondante centro, cosi' nessuna
+    # colonna resta a secco. (Con un tetto basso, tenere tutti i lati finiva
+    # per tagliare troppo il centro, che diventava la colonna mancante.)
+    MAX_ART = 850
     if len(articoli) > MAX_ART:
         prim_ids = {id(a) for a in articoli if a.get("primaria")}
         prim = [a for a in articoli if id(a) in prim_ids]
