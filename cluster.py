@@ -123,24 +123,31 @@ PROMPT_RAGGRUPPA = """Qui sotto ci sono i titoli delle notizie italiane delle ul
 
 Raggruppa i titoli che parlano dello STESSO SINGOLO FATTO.
 
-Questo è un lavoro di precisione, e l'errore che devi evitare è uno solo: mettere insieme titoli che parlano di cose vicine ma diverse. Il sito confronta come lo stesso fatto viene titolato da testate di orientamento opposto. Se nel gruppo entrano due fatti diversi, il confronto non dimostra niente e il lettore se ne accorge subito.
+**Il tuo obiettivo.** Questo sito mostra come la STESSA grande notizia del giorno viene titolata da testate di orientamento opposto. Quindi il lavoro più prezioso che puoi fare è: tra tutti questi titoli, TROVARE le notizie principali coperte da più testate — una versione di sinistra, una di centro (spesso un lancio d'agenzia ANSA/AGI), una di destra — e METTERLE INSIEME nello stesso gruppo. Per ogni fatto importante che vedi, cerca attivamente se altre testate lo stanno raccontando con parole diverse, e uniscile. Un titolo di sinistra e uno di destra sullo stesso fatto vanno quasi sempre nello stesso gruppo: è esattamente il confronto che serve. Non lasciare da soli i titoli delle notizie grosse: è probabile che quel fatto sia coperto anche dagli altri lati.
+
+Questo è comunque un lavoro di precisione, e l'errore da evitare è uno: mettere insieme notizie DAVVERO diverse. Il sito confronta come la stessa notizia viene titolata da testate di orientamento opposto. Se nel gruppo entrano due notizie diverse, il confronto non dimostra niente. Ma attenzione: spaccare una grande notizia in tanti frammenti è un errore altrettanto grave, perché così nessun frammento ha le tre voci e la notizia non esce affatto.
 
 **La cosa che DEVI fare bene.** Titoli scritti con parole completamente diverse sono spesso lo stesso fatto, ed è proprio quello che cerco:
 - "Fontana chiede la testa di Salvini" / "Fontana: un passo indietro di Salvini? Niente va escluso" → STESSO fatto: la dichiarazione di Fontana sulla guida della Lega.
 - "Tutti al tavolo di Lavitola, il conto solo a Ranucci" / "Il legale: Ranucci potrebbe aver capito" → STESSO fatto: l'inchiesta su Ranucci e i suoi rapporti con Lavitola.
 Non guardare le parole in comune: guarda di quale fatto si parla.
 
-**La cosa che NON devi fare.** Questi sono errori, non raggrupparli:
-- "Europei di ATLETICA a Birmingham" con "Europei di NUOTO a Parigi" → competizioni diverse, città diverse, sport diversi. DUE eventi, anche se entrambi parlano di medagliere e di Italia.
+**La cosa che NON devi fare — unire notizie DAVVERO diverse:**
+- "Europei di ATLETICA a Birmingham" con "Europei di NUOTO a Parigi" → competizioni diverse, città diverse, sport diversi. DUE eventi.
 - "L'Italia chiude prima nel medagliere" con "Quadarella vince i 400 stile libero" → uno è il bilancio complessivo, l'altro una singola gara. DUE eventi.
-- "Attacco ucraino su Belgorod" con "Mosca bombarda Odessa" → cambia chi attacca e chi è attaccato. DUE eventi, anche se è la stessa guerra nella stessa notte.
-- "Scade la tregua con l'Iran" con "Il Wsj scrive che l'Iran ha usato la tregua per prepararsi alla guerra" → uno è un fatto in corso, l'altro la ricostruzione di un giornale. DUE eventi.
-- Due sbarchi in due giorni diversi, due incidenti stradali in due province, due dichiarazioni dello stesso politico su temi diversi → sempre eventi separati.
-- Un ARGOMENTO non è un evento. "La crisi migratoria a Ceuta" è un argomento e in una giornata produce dieci fatti distinti: il Marocco che ferma 294 persone al confine, Sánchez che convoca i ministri, un commento sulla politica europea. Sono tre eventi, non uno.
+- Due sbarchi in due GIORNI diversi, due incidenti stradali in due province, due dichiarazioni dello stesso politico su temi diversi → eventi separati.
+
+**MA l'errore opposto è peggiore: NON spaccare la grande notizia del giorno.** Le notizie importanti si sviluppano su più aspetti, e TUTTI gli aspetti della stessa vicenda di oggi vanno nello STESSO gruppo — è lì che il confronto sinistra/centro/destra vale di più:
+- Guerra Russia-Ucraina: i raid della notte, la replica di Putin, la mossa di Macron sui missili, i danni all'economia russa → se sono le notizie di OGGI sullo stesso episodio, è UN solo evento «la giornata di guerra in Ucraina», con le testate che ne sottolineano aspetti diversi. NON tre eventi separati con una voce ciascuno.
+- Un terremoto con le scosse, i feriti, i soccorsi → un evento.
+- Una manovra economica con le sue singole misure discusse oggi → un evento.
+- Un caso di cronaca (un omicidio, un incidente mortale) con l'indagine, le reazioni, i dettagli → un evento.
+
+**Regola pratica:** se Google News lo terrebbe in UN unico blocco di «notizie principali» con più testate sotto, tienilo in un gruppo solo anche tu. Solo un TEMA perenne e generico ("l'immigrazione", "la guerra" in astratto, senza un episodio del giorno) non è un evento.
 
 **Nel dubbio, UNISCI — poi si controlla.** Un secondo passaggio ricontrollerà ogni gruppo e caccerà i titoli che non c'entrano, quindi un gruppo un po' generoso è sicuro; un gruppo spaccato no. Se lo stesso fatto finisce in due gruppi separati, il confronto fra le testate di orientamento opposto si perde e non lo recupera più nessuno. Perciò, quando due titoli *potrebbero* essere lo stesso singolo fatto, mettili insieme. Resta fermo solo il divieto qui sopra: non unire MAI fatti davvero diversi (evento, luogo, giorno o protagonisti diversi).
 
-**Come ti controlli.** Per ogni gruppo devi scrivere `fatto_specifico`: chi ha fatto cosa, dove, quando. Poi rileggi ogni titolo del gruppo e chiediti se quel titolo parla di *quel* fatto. Se la risposta è "parla di qualcosa di collegato", il titolo va fuori. Se per far entrare tutti i titoli devi scrivere un fatto_specifico vago, allora il gruppo è sbagliato: spaccalo.
+**Come ti controlli.** Per ogni gruppo scrivi `fatto_specifico`: la vicenda del giorno a cui si riferisce. Per una notizia grande va bene un fatto_specifico un po' ampio che tenga insieme gli aspetti di oggi (es. «gli sviluppi del 23 agosto della guerra Russia-Ucraina: raid notturni, replica di Putin, missili annunciati da Macron»). Spacca solo se il fatto_specifico diventa un TEMA astratto e senza tempo (es. «la politica migratoria europea») o se dentro finiscono giorni/episodi diversi.
 
 **Commenti ed editoriali.** Un commento, un retroscena o un editoriale va nel gruppo del fatto di cui parla — sono la parte più interessante da confrontare. Ma solo se parla di *quel* fatto: un editoriale sullo stato della sinistra italiana non va nel gruppo di una singola dichiarazione di Schlein.
 
@@ -187,15 +194,14 @@ SCHEMA_VERIFICA = {
 
 PROMPT_VERIFICA = """Qualcuno ha raggruppato dei titoli di giornale per evento. Il tuo compito è controllare il lavoro e trovare gli intrusi.
 
-Per ogni gruppo trovi il fatto specifico dichiarato e i titoli che sono stati messi dentro. Per ogni titolo chiediti una cosa sola: **questo titolo parla di quel fatto preciso?**
+Per ogni gruppo trovi il fatto/vicenda dichiarato e i titoli dentro. Per ogni titolo chiediti: **questo titolo parla della stessa NOTIZIA (la stessa vicenda del giorno), o di una notizia diversa?**
 
-Togli il titolo se:
-- parla di un fatto diverso, anche se collegato o dello stesso argomento
-- riguarda una gara, una competizione, una città, un giorno o dei protagonisti diversi
-- è un commento generico su un tema, non su quel fatto
-- ribalta i ruoli (chi attacca e chi è attaccato, chi accusa e chi è accusato)
+Togli il titolo SOLO se parla di una notizia DAVVERO diversa:
+- un altro episodio, un altro giorno, un'altra vicenda (non un aspetto diverso della stessa notizia di oggi)
+- una gara / competizione / città chiaramente diversa
+- un tema perenne e generico al posto della notizia del giorno
 
-Non togliere il titolo solo perché è scritto con parole diverse, o perché ha un tono opposto, o perché sceglie numeri diversi, o perché è un'opinione anziché una cronaca. Quelle differenze sono esattamente il materiale che serve al sito: vanno conservate.
+**NON togliere** un titolo perché sottolinea un ASPETTO diverso della stessa grande notizia del giorno. Nella guerra in Ucraina, «i raid di Kiev», «la replica di Putin», «i missili di Macron», «l'economia russa» sono aspetti della STESSA giornata di guerra: restano tutti insieme, non sono intrusi. E non togliere un titolo solo perché è scritto con parole diverse, ha un tono opposto, sceglie numeri diversi, o è un'opinione anziché una cronaca su quella stessa vicenda: quelle differenze sono il materiale del confronto e vanno conservate. Nel dubbio, LASCIA il titolo nel gruppo.
 
 Sii severo. Un gruppo con due titoli giusti vale più di un gruppo con quattro titoli di cui uno stonato. Se un gruppo è tutto sbagliato puoi togliere anche tutti i titoli tranne uno.
 
@@ -321,14 +327,30 @@ def raggruppa(client, articoli, ore):
     # quindi possiamo dargliene molti di più senza rischiare il taglio a metà.
     # Più articoli in ingresso = più probabilità che ogni notizia grossa abbia
     # tutte e tre le colonne (sinistra, centro, destra).
-    MAX_ART = 450
+    # I "lati" (sinistra SR/CS e destra CD/DR) sono la merce SCARSA: se un titolo
+    # di sinistra o di destra viene buttato via qui, quella notizia non potra' mai
+    # avere le tre colonne piene. Il CENTRO invece e' abbondante (ANSA/AGI hanno
+    # sette-otto sezioni): e' quello che si puo' tagliare senza danno, perche' il
+    # centro non manca quasi mai. Quindi teniamo SEMPRE tutti i lati + l'agenda,
+    # e riempiamo il resto del tetto con il centro piu' recente.
+    MAX_ART = 550
     if len(articoli) > MAX_ART:
-        prim = [a for a in articoli if a.get("primaria")]
-        resto = [a for a in articoli if not a.get("primaria")]
-        resto.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
-        tenuti = prim + resto[: max(0, MAX_ART - len(prim))]
-        print("  troppi articoli (%d): raggruppo i %d piu' rilevanti (agenda + recenti)"
-              % (len(articoli), len(tenuti)))
+        prim_ids = {id(a) for a in articoli if a.get("primaria")}
+        prim = [a for a in articoli if id(a) in prim_ids]
+        lati = [a for a in articoli if id(a) not in prim_ids
+                and a.get("area") in ("SR", "CS", "CD", "DR")]
+        centro = [a for a in articoli if id(a) not in prim_ids and a.get("area") == "C"]
+        centro.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
+        tenuti = prim + lati
+        if len(tenuti) < MAX_ART:
+            tenuti += centro[: MAX_ART - len(tenuti)]
+        else:
+            tenuti.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
+            tenuti = tenuti[:MAX_ART]
+        n_lati = sum(1 for a in tenuti if a.get("area") in ("SR", "CS", "CD", "DR"))
+        print("  troppi articoli (%d): raggruppo i %d piu' rilevanti "
+              "(agenda + TUTTI i %d lati + centro recente)"
+              % (len(articoli), len(tenuti), n_lati))
         articoli = tenuti
     righe = []
     for a in articoli:
