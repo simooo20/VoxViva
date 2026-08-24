@@ -238,8 +238,8 @@ main{padding:34px 0 10px}
 .ru-kicker{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
 .ru-tema{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
   font-weight:700}
-.ru-head h2{font-family:var(--display);font-size:26px;line-height:1.18;margin:0;
-  letter-spacing:-.02em;font-weight:600}
+.ru-head h2{font-family:var(--display);font-size:31px;line-height:1.14;margin:0;
+  letter-spacing:-.025em;font-weight:700}
 .ru-sint{margin:11px 0 0;font-size:15px;line-height:1.5;color:var(--ink-2);font-family:var(--serif)}
 .ru-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
 .rc{padding:0 20px;border-right:1px solid var(--line-2);min-width:0}
@@ -266,7 +266,7 @@ main{padding:34px 0 10px}
   .ru-cols{grid-template-columns:1fr;gap:0}
   .rc{padding:16px 0;border-right:0;border-bottom:1px solid var(--line-2)}
   .rc:last-child{border-bottom:0}
-  .ru-head h2{font-size:22px}
+  .ru-head h2{font-size:25px}
   /* su mobile diamo alla nota e alla rassegna tutta la larghezza, prima erano strette */
   .roundup{padding-left:15px;padding-right:15px}
   .nota{margin-left:0;margin-right:0}
@@ -523,12 +523,19 @@ def main():
     completi = [ev for ev in eventi if completo(ev)]
     scartati_incompleti = len(eventi) - len(completi)
 
-    # dentro ai completi: prima l'agenda (spina dorsale) in ordine, poi gli altri
+    # Il valore del sito e' la DIVERGENZA: dove destra e sinistra raccontano la
+    # stessa notizia in modo opposto. Quindi ordiniamo mettendo davanti i
+    # confronti a divergenza alta, poi media, poi bassa. A parita', l'agenda
+    # (per le principali) o l'ampiezza della scala (per gli altri).
+    DIV_RANK = {"alta": 3, "media": 2, "bassa": 1}
+    def div_rank(ev):
+        return DIV_RANK.get(ev.get("divergenza"), 0)
+
     principali = sorted([ev for ev in completi if ev.get("principale")],
-                        key=lambda e: (e.get("ordine_agenzia", 999), -e["ampiezza"]))[: args.max]
+                        key=lambda e: (-div_rank(e), e.get("ordine_agenzia", 999), -e["ampiezza"]))[: args.max]
     gia = {id(ev) for ev in principali}
     altri = sorted([ev for ev in completi if id(ev) not in gia],
-                   key=lambda e: (e["ampiezza"], e["totale"]), reverse=True)[: args.max]
+                   key=lambda e: (div_rank(e), e["ampiezza"], e["totale"]), reverse=True)[: args.max]
 
     # RETE DI SICUREZZA: se in questo momento NESSUNA notizia e' coperta da tutte
     # e tre le aree (capita: il raggruppamento varia di giro in giro), invece di
@@ -555,16 +562,15 @@ def main():
     corpo = []
     if principali:
         corpo.append('<div class="sezione-tit">Le principali di oggi</div>')
-        corpo.append('<p class="sezione-sub">Le notizie in agenda su Google News, nell\'ordine in cui '
-                     'le mette &mdash; e come le titola sinistra, centro e destra. &Egrave; l\'agenda '
-                     'del giorno, non una nostra scelta. Compaiono solo le notizie coperte da tutte e '
-                     'tre le aree.</p>')
+        corpo.append('<p class="sezione-sub">Le notizie pi&ugrave; grosse del giorno &mdash; quelle in '
+                     'agenda su Google News, coperte da sinistra, centro e destra &mdash; con davanti '
+                     'quelle dove il racconto cambia di pi&ugrave; da un lato all\'altro.</p>')
         corpo += [blocco_evento(ev) for ev in principali]
     if altri:
         corpo.append(slot_ads("in_feed"))
-        corpo.append('<div class="sezione-tit">Altri confronti</div>')
-        corpo.append('<p class="sezione-sub">Notizie fuori dall\'agenda del giorno, ma pur sempre '
-                     'coperte da sinistra, centro e destra.</p>')
+        corpo.append('<div class="sezione-tit">Dove il racconto cambia di pi&ugrave;</div>')
+        corpo.append('<p class="sezione-sub">Altri confronti coperti da sinistra, centro e destra, '
+                     'ordinati per quanto cambia l\'inquadratura tra un\'area e l\'altra.</p>')
         corpo += [blocco_evento(ev) for ev in altri]
     if parziali:
         corpo.append('<div class="sezione-tit">Confronti in costruzione</div>')
@@ -627,7 +633,6 @@ def main():
   <p class="claim">Quasi nessuno legge gli articoli: si leggono i titoli. Qui ogni notizia
   italiana &egrave; messa accanto a se stessa, dal titolo pi&ugrave; a sinistra a quello pi&ugrave;
   a destra, col lancio d'agenzia in mezzo. Nessun titolo &egrave; riscritto.</p>
-  %(stat)s
   <div class="scala">%(scala)s</div>
   <p class="scala-nota">La scala corre da sinistra a destra come la leggeresti su carta:
   conta solo la posizione, dall'estremo pi&ugrave; a sinistra a quello pi&ugrave; a destra.</p>

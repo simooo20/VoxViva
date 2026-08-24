@@ -556,7 +556,7 @@ def main():
     ap.add_argument("--no-verifica", action="store_true",
                     help="salta il controllo che caccia gli intrusi dai gruppi (sconsigliato)")
     ap.add_argument("--no-analisi", action="store_true", help="salta il passo 2")
-    ap.add_argument("--analizza", type=int, default=8, help="quanti eventi analizzare (default 8, economia)")
+    ap.add_argument("--analizza", type=int, default=22, help="quanti eventi analizzare (serve la divergenza per ordinarli)")
     args = ap.parse_args()
 
     if not IN.exists():
