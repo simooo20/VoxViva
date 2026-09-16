@@ -6,6 +6,14 @@ Tutti gli altri script importano da qui, così cambiare la scala non significa
 andare a caccia di stringhe in cinque file.
 """
 
+import os
+
+# Quanto spingere sulla versione "urlata". 1.0 = normale; alza (es. 1.6, 2.0)
+# per pescare titoli sempre piu' carichi e sempre piu' verso l'estremo; abbassa
+# (es. 0.6) per un confronto piu' sobrio. Si cambia senza toccare il codice con
+# la variabile ILVAGLIO_INTENSITA_ALLARME.
+INTENSITA_ALLARME = float(os.environ.get("ILVAGLIO_INTENSITA_ALLARME", "1.6"))
+
 # dalla più a sinistra alla più a destra: l'ordine è quello che conta
 AREE = ["SR", "CS", "C", "CD", "DR"]
 
@@ -101,6 +109,17 @@ _PAROLE_ALLARME = {
     # tono da inchiesta / polemica
     "affondo", "mirino", "cortocircuito", "giallo", "retromarcia", "silenzio",
     "guerra", "resa", "fuga", "svolta",
+    # escalation / catastrofismo
+    "escalation", "apocalisse", "apocalittico", "tsunami", "valanga", "allerta",
+    "allarmante", "paura", "devastante", "spaventoso", "drammatico", "carneficina",
+    "offensiva", "controffensiva", "assedio", "insorge", "esplosiva",
+    # crolli / soldi
+    "crollo", "tracollo", "tonfo", "picchiata", "disfatta", "flop", "batosta",
+    "salasso", "stangata", "spread", "default", "fallimento",
+    # scontro politico urlato
+    "schiaffo", "spallata", "showdown", "rissa", "caccia", "linciaggio",
+    "spia", "dossier", "trama", "spartizione", "poltrone", "casta", "regime",
+    "deriva", "assurdo", "grottesco", "indecente", "scempio", "sfacelo",
 }
 _MAIUSC = _re.compile(r"\b[A-ZÀ-Ü]{3,}\b")
 
@@ -116,8 +135,8 @@ def allarme(titolo: str) -> float:
     esclam = low.count("!") + low.count("?")
     virgolette = t.count("«") + t.count("“") + t.count("\"") + (1 if "'" in t and '"' not in t else 0)
     maiusc = len([m for m in _MAIUSC.findall(t) if len(m) >= 4])   # REPORTOPOLI, SHOCK
-    score = 1.5 * lex + 0.8 * esclam + 0.5 * virgolette + 1.2 * maiusc
-    return round(score, 2)
+    score = 2.0 * lex + 1.0 * esclam + 0.6 * virgolette + 1.5 * maiusc
+    return round(INTENSITA_ALLARME * score, 2)
 
 
 def piu_allarmante(articoli, verso_destra=None):
@@ -128,13 +147,18 @@ def piu_allarmante(articoli, verso_destra=None):
         return None
     def chiave(a):
         al = allarme(a.get("titolo", ""))
+        idx = INDICE.get(a.get("area"), 2)
         if verso_destra is True:
-            spinta = INDICE.get(a.get("area"), 0)
+            estremo = idx                      # piu' a destra = piu' estremo
         elif verso_destra is False:
-            spinta = -INDICE.get(a.get("area"), 0)
+            estremo = (len(AREE) - 1) - idx    # piu' a sinistra = piu' estremo
         else:
-            spinta = 0
-        return (al, spinta, a.get("pubblicato", ""))
+            estremo = 0
+        # la posizione estrema entra NEL punteggio (non solo come spareggio):
+        # cosi' fra due titoli simili vince quello del lato piu' radicale, ma
+        # un titolo davvero urlato batte comunque un radicale spento.
+        carica = al + 0.9 * INTENSITA_ALLARME * estremo
+        return (carica, al, a.get("pubblicato", ""))
     return max(articoli, key=chiave)
 
 

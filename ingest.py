@@ -16,6 +16,7 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse
+from xml.etree import ElementTree as ET
 
 import gzip
 import urllib.request
@@ -163,6 +164,105 @@ def data_di(entry):
     return None
 
 
+# --- Recupero dalla news sitemap -------------------------------------------
+# Alcune testate bloccano l'RSS dai runner ma servono la loro news sitemap
+# (lo schema Google News: ha <news:title> + data). La usiamo SOLO come ripiego
+# quando l'RSS di quella fonte torna a zero e la fonte ha "sitemap": true in
+# sources.json. Scoperta della sitemap dal robots.txt, con qualche URL di
+# riserva; si scende un livello dentro un eventuale indice, dando la
+# precedenza alle sotto-sitemap "news".
+
+_RISERVE_SITEMAP = ["/sitemap-news.xml", "/news-sitemap.xml", "/sitemap_news.xml",
+                    "/sitemap.xml", "/sitemap_index.xml"]
+
+
+def _get_xml(url):
+    """Scarica un XML con gli header da browser; gestisce anche i .gz."""
+    dati = scarica_feed(url)
+    if dati and dati[:2] == b"\x1f\x8b":
+        try:
+            dati = gzip.decompress(dati)
+        except Exception:
+            pass
+    return dati
+
+
+def _locale(tag):
+    return tag.rsplit("}", 1)[-1].lower()
+
+
+def titoli_da_sitemap(dominio, taglio, limite=60):
+    """Ritorna [(titolo, url, dt)] dalla news sitemap del dominio, entro taglio."""
+    candidate = []
+    rob = _get_xml("https://%s/robots.txt" % dominio)
+    if rob:
+        for riga in rob.decode("utf-8", "replace").splitlines():
+            m = re.match(r"\s*sitemap\s*:\s*(\S+)", riga, re.I)
+            if m:
+                candidate.append(m.group(1).strip())
+    if not candidate:
+        candidate = ["https://%s%s" % (dominio, p) for p in _RISERVE_SITEMAP]
+
+    out, visti = [], set()
+
+    def scendi(url, prof=0):
+        if url in visti or prof > 2 or len(out) >= limite:
+            return
+        visti.add(url)
+        dati = _get_xml(url)
+        if not dati:
+            return
+        try:
+            radice = ET.fromstring(dati)
+        except Exception:
+            return
+        if _locale(radice.tag) == "sitemapindex":
+            figli = []
+            for sm in radice:
+                loc = next((c.text for c in sm if _locale(c.tag) == "loc" and c.text), None)
+                if loc:
+                    figli.append(loc.strip())
+            figli.sort(key=lambda u: 0 if "news" in u.lower() else 1)
+            for loc in figli[:4]:
+                scendi(loc, prof + 1)
+            return
+        for u in radice:
+            if _locale(u.tag) != "url":
+                continue
+            titolo = data = loc = None
+            for c in u.iter():
+                lc = _locale(c.tag)
+                if lc == "loc" and c.text and loc is None:
+                    loc = c.text.strip()
+                elif lc == "title" and c.text:
+                    titolo = c.text.strip()
+                elif lc == "publication_date" and c.text:
+                    data = c.text.strip()
+                elif lc == "lastmod" and c.text and data is None:
+                    data = c.text.strip()
+            if not titolo or not loc:
+                continue
+            dt = None
+            if data:
+                try:
+                    dt = datetime.fromisoformat(data.replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                except Exception:
+                    dt = None
+            if dt is None or dt < taglio:
+                continue
+            out.append((titolo, loc, dt))
+            if len(out) >= limite:
+                break
+
+    for url in candidate[:6]:
+        scendi(url)
+        if out:
+            break
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ore", type=int, default=24, help="finestra temporale in ore (default 24)")
@@ -235,8 +335,49 @@ def main():
             })
             presi += 1
 
+        # Ripiego: RSS a zero + fonte abilitata -> provo la news sitemap.
+        via_sitemap = 0
+        if presi == 0 and src.get("sitemap"):
+            try:
+                for pos, (titolo, link, dt) in enumerate(
+                        titoli_da_sitemap(src["domain"], taglio)):
+                    titolo = pulisci_titolo(titolo)
+                    if not titolo or not link or len(titolo) < 15:
+                        continue
+                    if MERCATO.search(titolo):
+                        scartati_mercato += 1
+                        continue
+                    url_norm = pulisci_url(link)
+                    if url_norm in visti_url:
+                        continue
+                    ktit = chiave_titolo(titolo)
+                    if ktit in visti_titolo:
+                        continue
+                    visti_url.add(url_norm)
+                    visti_titolo.add(ktit)
+                    articoli.append({
+                        "id": hashlib.sha1(url_norm.encode()).hexdigest()[:10],
+                        "titolo": titolo,
+                        "url": link,
+                        "pubblicato": dt.isoformat(),
+                        "fonte": nome,
+                        "feed": src["name"] + " (sitemap)",
+                        "dominio": host_di(link) or src["domain"],
+                        "area": area,
+                        "primaria": primaria,
+                        "ordine_feed": pos,
+                        "immagine": None,
+                    })
+                    presi += 1
+                    via_sitemap += 1
+            except Exception as exc:
+                report.append({"fonte": nome, "area": area, "presi": 0,
+                               "nota": "sitemap ko: %s" % str(exc)[:60]})
+
         nota = ""
-        if presi == 0:
+        if via_sitemap:
+            nota = "recuperati %d dalla sitemap (RSS a zero)" % via_sitemap
+        elif presi == 0:
             nota = "feed vivo ma niente nelle ultime %dh" % args.ore if fp.entries else "FEED DA CONTROLLARE"
         report.append({"fonte": nome, "area": area, "presi": presi, "nota": nota})
 

@@ -135,7 +135,8 @@
       "area": "CS",
       "rss": "https://www.huffingtonpost.it/rss.xml",
       "proprieta": "Gruppo GEDI / Editoriale Huffington Post Italia",
-      "stato": "bloccato_da_datacenter"
+      "stato": "bloccato_da_datacenter",
+      "sitemap": true
     },
     {
       "name": "Il Tirreno",
@@ -275,7 +276,8 @@
       "rss": "https://xml2.corriereobjects.it/rss/homepage.xml",
       "proprieta": "RCS MediaGroup (Urbano Cairo)",
       "stato": "da verificare (batch liste feed)",
-      "nota": "Il vecchio url xml2.corriereobjects.it/rss/homepage.xml risponde ma restituisce articoli di MAGGIO 2024: feed congelato da due anni che non da' errore. Da non riusare."
+      "nota": "Il vecchio url xml2.corriereobjects.it/rss/homepage.xml risponde ma restituisce articoli di MAGGIO 2024: feed congelato da due anni che non da' errore. Da non riusare.",
+      "sitemap": true
     },
     {
       "name": "Il Sole 24 Ore",
@@ -365,7 +367,8 @@
       "rss": "https://www.ilgiornale.it/feed.xml",
       "proprieta": "famiglia Angelucci dal 2023, prima famiglia Berlusconi",
       "stato": "url aggiornato da liste feed",
-      "nota": "Nessun url funzionante trovato: /rss.xml, /feed/, /feed.xml, /feed.rss, /rss/home.xml, /rss/politica.xml danno tutti 404. Da cercare a mano nel sorgente della homepage (application/rss+xml). Manca una delle testate piu' importanti della colonna destra. Affinita' (Simone): destra, area Forza Italia (ma dal 2023 proprieta' Angelucci)."
+      "nota": "Nessun url funzionante trovato: /rss.xml, /feed/, /feed.xml, /feed.rss, /rss/home.xml, /rss/politica.xml danno tutti 404. Da cercare a mano nel sorgente della homepage (application/rss+xml). Manca una delle testate piu' importanti della colonna destra. Affinita' (Simone): destra, area Forza Italia (ma dal 2023 proprieta' Angelucci).",
+      "sitemap": true
     },
     {
       "name": "Libero Quotidiano",
@@ -392,7 +395,8 @@
       "rss": "https://www.ilmessaggero.it/rss/home.xml",
       "proprieta": "Caltagirone Editore",
       "stato": "robots_vietato",
-      "nota": "Simone lo classifica imparziale (18/08/2026). Proprieta': Caltagirone Editore. Nota tecnica: il feed /rss/home.xml e' vietato da robots.txt, la testata resta fuori finche' non si trova un feed autorizzato."
+      "nota": "Simone lo classifica imparziale (18/08/2026). Proprieta': Caltagirone Editore. Nota tecnica: il feed /rss/home.xml e' vietato da robots.txt, la testata resta fuori finche' non si trova un feed autorizzato.",
+      "sitemap": true
     },
     {
       "name": "Il Mattino",

@@ -76,11 +76,106 @@ OUT = BASE / "data" / "events.json"
 # senza toccare il codice, con la variabile ILVAGLIO_MODEL nel repo.
 MODELLO = os.environ.get("ILVAGLIO_MODEL", "claude-haiku-4-5")
 
-# Il raggruppamento e' il passo difficile (capire che la STESSA notizia e'
-# titolata con parole diverse da sinistra e da destra): qui usiamo un modello
-# piu' forte. Verifica e analisi restano su MODELLO (Haiku) per contenere la
-# spesa. Si cambia senza toccare il codice con ILVAGLIO_MODEL_RAGGRUPPA.
+# Il raggruppamento e' il passo difficile: capire che la STESSA notizia e'
+# titolata con parole OPPOSTE dagli estremi. E' proprio il titolo urlato di
+# SR/DR quello scritto piu' diversamente dal centro neutro, quindi il piu'
+# facile da NON riconoscere: e' il caso che regge o affonda il prodotto (far
+# uscire la versione piu' urlata). Per questo il raggruppamento sta su Sonnet,
+# che lo becca; verifica e analisi restano su Haiku per contenere la spesa.
+# Il tetto giornaliero fa comunque da rete. Per tornare al risparmio massimo
+# (a costo di qualche merge urlato perso) basta la variabile, senza toccare il
+# codice:  ILVAGLIO_MODEL_RAGGRUPPA=claude-haiku-4-5
 MODELLO_RAGGRUPPA = os.environ.get("ILVAGLIO_MODEL_RAGGRUPPA", "claude-sonnet-4-5")
+
+# --- TETTO DI SPESA GIORNALIERO -------------------------------------------
+# Limite in DOLLARI al giorno sulle chiamate API di questo progetto (i prezzi
+# API sono in USD: 0.33 USD = circa 0.30 EUR). Superato il tetto, cluster.py
+# smette di chiamare il modello: verifica e analisi vengono saltate, e se il
+# tetto e' gia' esaurito a inizio giro il giro viene saltato del tutto e resta
+# online l'ultima versione pubblicata (nessun sito vuoto).
+# Si cambia senza toccare il codice con la variabile ILVAGLIO_TETTO_USD.
+TETTO_SPESA_USD = float(os.environ.get("ILVAGLIO_TETTO_USD", "0.33"))
+
+# Prezzi per milione di token (input, output). Verificati a settembre 2026.
+# Se il modello non e' in tabella si usa il prezzo di Sonnet (prudenziale).
+PREZZI = {
+    "claude-sonnet-4-5": (3.0, 15.0),
+    "claude-haiku-4-5":  (1.0, 5.0),
+}
+SPESA_FILE = os.environ.get("ILVAGLIO_SPESA_FILE", "web/spesa.json")
+SPESA_URL = os.environ.get("ILVAGLIO_SPESA_URL",
+                           "https://simooo20.github.io/VoxViva/spesa.json")
+
+
+class BudgetEsaurito(RuntimeError):
+    """Alzata quando la spesa del giorno ha raggiunto il tetto."""
+
+
+def _prezzo(modello):
+    return PREZZI.get(modello, PREZZI["claude-sonnet-4-5"])
+
+
+def _costo(modello, uso):
+    pin, pout = _prezzo(modello)
+    return uso.input_tokens / 1e6 * pin + uso.output_tokens / 1e6 * pout
+
+
+class Budget:
+    """Tiene il conto della spesa di OGGI, sommando i giri precedenti.
+
+    Lo stato del giorno vive in web/spesa.json, che viene pubblicato su Pages:
+    e' cosi' che un giro legge quanto hanno gia' speso i giri precedenti (il
+    runner di GitHub e' effimero e non conserva niente da solo). Se non si
+    riesce a leggere lo storico si riparte da zero: il vero paracadute e'
+    comunque il limite di spesa mensile impostato nella Console Anthropic.
+    """
+
+    def __init__(self, tetto):
+        self.tetto = tetto
+        self.oggi = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        self.speso_prima = self._carica()
+        self.speso_ora = 0.0
+
+    def _carica(self):
+        # prima il file locale (raro: stesso runner), poi quello su Pages
+        try:
+            d = json.loads(Path(SPESA_FILE).read_text(encoding="utf-8"))
+            if d.get("giorno") == self.oggi:
+                return float(d.get("usd", 0.0))
+        except Exception:
+            pass
+        try:
+            import urllib.request
+            url = "%s?v=%d" % (SPESA_URL, int(time.time()))
+            with urllib.request.urlopen(url, timeout=10) as r:
+                d = json.loads(r.read().decode("utf-8"))
+            if d.get("giorno") == self.oggi:
+                return float(d.get("usd", 0.0))
+        except Exception:
+            pass
+        return 0.0
+
+    @property
+    def totale(self):
+        return self.speso_prima + self.speso_ora
+
+    def resta(self):
+        return self.tetto - self.totale
+
+    def registra(self, modello, uso):
+        self.speso_ora += _costo(modello, uso)
+        try:
+            Path(SPESA_FILE).parent.mkdir(parents=True, exist_ok=True)
+            Path(SPESA_FILE).write_text(
+                json.dumps({"giorno": self.oggi, "usd": round(self.totale, 4)},
+                           ensure_ascii=False),
+                encoding="utf-8")
+        except Exception:
+            pass
+
+
+BUDGET = None  # impostato in main(), None = nessun tetto (es. test)
+
 
 SCHEMA_RAGGRUPPA = {
     "name": "registra_eventi",
@@ -150,6 +245,8 @@ Non guardare le parole in comune: guarda di quale fatto si parla.
 **Come ti controlli.** Per ogni gruppo scrivi `fatto_specifico`: la vicenda del giorno a cui si riferisce. Per una notizia grande va bene un fatto_specifico un po' ampio che tenga insieme gli aspetti di oggi (es. «gli sviluppi del 23 agosto della guerra Russia-Ucraina: raid notturni, replica di Putin, missili annunciati da Macron»). Spacca solo se il fatto_specifico diventa un TEMA astratto e senza tempo (es. «la politica migratoria europea») o se dentro finiscono giorni/episodi diversi.
 
 **Commenti ed editoriali.** Un commento, un retroscena o un editoriale va nel gruppo del fatto di cui parla — sono la parte più interessante da confrontare. Ma solo se parla di *quel* fatto: un editoriale sullo stato della sinistra italiana non va nel gruppo di una singola dichiarazione di Schlein.
+
+**I titoli URLATI sono i più preziosi — non lasciarli soli.** Un titolo carico, allarmistico o di parte (toni da scandalo, guerra, catastrofe, «vergogna», maiuscole, punti esclamativi) è di solito la versione estrema di una notizia che il centro racconta in modo asciutto: è ESATTAMENTE il confronto che serve. Proprio perché è scritto con parole diverse e cariche, è il caso più facile da lasciare erroneamente da solo. Quando vedi un titolo urlato, cerca attivamente se un'agenzia o un altro lato racconta lo stesso fatto in tono neutro, e UNISCILI: un titolo di sinistra radicale e uno di destra radicale sullo stesso episodio del giorno vanno sempre nello stesso gruppo, per quanto opposte siano le parole.
 
 Regole formali (IMPORTANTISSIME):
 - Riporta SOLO i gruppi con DUE O PIÙ titoli. I titoli che restano da soli NON vanno riportati: ci pensa il programma a tenerli come eventi singoli. Non elencare i singoli, non riempire la risposta ripetendo id già soli. Riporta esclusivamente gli accostamenti che hai trovato: così la risposta resta corta e non viene tagliata a metà.
@@ -293,11 +390,18 @@ def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
     # L'API ogni tanto risponde con un errore momentaneo (sovraccarico, limite,
     # timeout): non deve buttare giu' l'intero giro. Riproviamo qualche volta con
     # attesa crescente prima di arrenderci.
+    modello = modello or MODELLO
+    # Tetto di spesa: se oggi abbiamo gia' raggiunto il limite, non chiamiamo.
+    # Fuori dal ciclo di retry, cosi' non viene scambiato per un errore da riprovare.
+    if BUDGET is not None and BUDGET.resta() <= 0:
+        raise BudgetEsaurito(
+            "tetto giornaliero di %.2f USD raggiunto (spesi %.2f oggi)"
+            % (BUDGET.tetto, BUDGET.totale))
     ultimo = None
     for i in range(tentativi):
         try:
             risposta = client.messages.create(
-                model=modello or MODELLO,
+                model=modello,
                 max_tokens=max_tokens,
                 tools=[schema],
                 tool_choice={"type": "tool", "name": schema["name"]},
@@ -305,6 +409,8 @@ def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
             )
             for blocco in risposta.content:
                 if blocco.type == "tool_use":
+                    if BUDGET is not None:
+                        BUDGET.registra(modello, risposta.usage)
                     return blocco.input, risposta.usage
             raise RuntimeError("Il modello non ha chiamato lo strumento.")
         except Exception as exc:
@@ -355,11 +461,20 @@ def raggruppa(client, articoli, ore):
               "(agenda + TUTTI i %d lati + centro recente)"
               % (len(articoli), len(tenuti), n_lati))
         articoli = tenuti
+    # Al modello NON serve l'id vero (sha1 da 10 caratteri): gli basta
+    # un'etichetta corta per indicare i titoli. Usiamo un indice progressivo
+    # (1, 2, 3...) e lo ritraduciamo in id vero qui in Python. Cosi' ogni id
+    # occupa ~1 token invece di ~5, sia nei titoli in ingresso sia negli "ids"
+    # che il modello ci rimanda: e' il passo su Sonnet, quello che pesa di piu'.
+    # Tolta anche l'ora (HH:MM): per capire se due titoli sono lo stesso fatto
+    # del giorno il minuto non serve, e la finestra "{ore} ore" e' gia' nel prompt.
+    per_key = {}
     righe = []
-    for a in articoli:
-        ora = a["pubblicato"][11:16]
+    for n, a in enumerate(articoli, 1):
+        k = str(n)
+        per_key[k] = a
         # la testata serve al modello per capire il registro, la posizione politica NO
-        righe.append("%s [%s, %s] %s" % (a["id"], a["fonte"], ora, a["titolo"]))
+        righe.append("%s [%s] %s" % (k, a["fonte"], a["titolo"]))
     prompt = PROMPT_RAGGRUPPA.format(ore=ore, titoli="\n".join(righe))
 
     dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=16000, modello=MODELLO_RAGGRUPPA)
@@ -369,14 +484,14 @@ def raggruppa(client, articoli, ore):
     if uso.output_tokens >= 15500:
         print("  ATTENZIONE: risposta ancora vicina al limite dei token")
 
-    per_id = {a["id"]: a for a in articoli}
     eventi, usati = [], set()
     for ev in dati.get("eventi", []):
         membri = []
         for i in ev.get("ids", []):
-            if i in per_id and i not in usati:
-                membri.append(per_id[i])
-                usati.add(i)
+            k = str(i)
+            if k in per_key and k not in usati:
+                membri.append(per_key[k])
+                usati.add(k)
         if membri:
             eventi.append({
                 "titolo_neutro": (ev.get("titolo_neutro") or membri[0]["titolo"]).strip(),
@@ -385,7 +500,7 @@ def raggruppa(client, articoli, ore):
                 "articoli": membri,
             })
 
-    persi = [a for a in articoli if a["id"] not in usati]
+    persi = [per_key[k] for k in per_key if k not in usati]
     if persi:
         print("  %d articoli non assegnati, li tengo come eventi singoli" % len(persi))
         for a in persi:
@@ -404,12 +519,18 @@ def verifica(client, eventi):
     if not candidati:
         return eventi
 
+    # Stesso trucco del raggruppamento: al posto dell'id sha1 diamo al modello
+    # una chiave corta ("gruppo-posizione", es. 3-2) e la ritraduciamo. Meno
+    # token nei titoli mostrati e negli id che ci rimanda in "da_togliere".
+    per_key = {}
     blocchi = []
     for n, (_, ev) in enumerate(candidati, 1):
         righe = ["Gruppo %d" % n,
                  "  fatto dichiarato: %s" % (ev.get("fatto_specifico") or ev["titolo_neutro"])]
-        for a in ev["articoli"]:
-            righe.append('  %s [%s] "%s"' % (a["id"], a["fonte"], a["titolo"]))
+        for j, a in enumerate(ev["articoli"], 1):
+            k = "%d-%d" % (n, j)
+            per_key[k] = a
+            righe.append('  %s [%s] "%s"' % (k, a["fonte"], a["titolo"]))
         blocchi.append("\n".join(righe))
 
     dati, uso = chiama(client, PROMPT_VERIFICA.format(gruppi="\n\n".join(blocchi)), SCHEMA_VERIFICA)
@@ -418,7 +539,8 @@ def verifica(client, eventi):
     espulsi_totali, tocchi = [], 0
     for voce in dati.get("controlli", []):
         n = voce.get("evento", 0)
-        da_togliere = set(voce.get("da_togliere") or [])
+        da_togliere_keys = set(str(x) for x in (voce.get("da_togliere") or []))
+        da_togliere = {per_key[k]["id"] for k in da_togliere_keys if k in per_key}
         if not (1 <= n <= len(candidati)) or not da_togliere:
             continue
         idx, ev = candidati[n - 1]
@@ -569,16 +691,32 @@ def main():
     print("Raggruppo %d articoli da %d testate." % (len(articoli), len({a["fonte"] for a in articoli})))
     client = client_anthropic()
 
-    eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))
+    global BUDGET
+    BUDGET = Budget(TETTO_SPESA_USD)
+    if BUDGET.resta() <= 0:
+        sys.exit("Tetto di spesa raggiunto: %.2f USD gia' spesi oggi (tetto %.2f). "
+                 "Salto il giro; resta online l'ultima versione pubblicata."
+                 % (BUDGET.totale, BUDGET.tetto))
+    print("Budget di oggi: spesi %.3f USD, tetto %.2f USD." % (BUDGET.totale, BUDGET.tetto))
+
+    try:
+        eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))
+    except BudgetEsaurito as exc:
+        sys.exit("Raggruppamento fermato dal tetto di spesa (%s). "
+                 "Salto il giro; resta online l'ultima versione pubblicata." % exc)
     if not args.no_verifica:
         try:
             eventi = verifica(client, eventi)
+        except BudgetEsaurito as exc:
+            print("  verifica saltata: %s" % exc)
         except Exception as exc:
             print("  verifica saltata per un errore momentaneo: %s" % str(exc)[:150])
     eventi = arricchisci(eventi)
     if not args.no_analisi:
         try:
             analizza(client, eventi, args.analizza)
+        except BudgetEsaurito as exc:
+            print("  analisi saltata: %s" % exc)
         except Exception as exc:
             print("  analisi saltata per un errore momentaneo: %s" % str(exc)[:150])
 
