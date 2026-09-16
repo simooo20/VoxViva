@@ -15,7 +15,7 @@ import re
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, quote
 from xml.etree import ElementTree as ET
 
 import gzip
@@ -263,6 +263,30 @@ def titoli_da_sitemap(dominio, taglio, limite=60):
     return out
 
 
+def titoli_da_google_news(dominio, taglio, limite=40):
+    """Ripiego per le testate bloccate per IP (RSS e sitemap non passano):
+    i titoli via l'RSS di Google News filtrato per sito. Google indicizza la
+    testata e ri-serve i titoli dai propri IP, che non sono bloccati. I titoli
+    arrivano con ' - Nome Testata' in coda: la togliamo."""
+    q = quote("site:%s when:1d" % dominio)
+    url = "https://news.google.com/rss/search?q=%s&hl=it&gl=IT&ceid=IT:it" % q
+    dati = scarica_feed(url)
+    fp = feedparser.parse(dati) if dati else feedparser.parse(url, agent=UA)
+    out = []
+    for e in (fp.entries or [])[:limite]:
+        titolo = (e.get("title") or "").strip()
+        if " - " in titolo:                       # toglie il ' - Testata' di Google
+            testa = titolo.rsplit(" - ", 1)[0]
+            if len(testa) >= 15:
+                titolo = testa
+        link = e.get("link") or ""
+        dt = data_di(e)
+        if not titolo or not link or dt is None or dt < taglio:
+            continue
+        out.append((titolo, link, dt))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ore", type=int, default=24, help="finestra temporale in ore (default 24)")
@@ -335,48 +359,66 @@ def main():
             })
             presi += 1
 
-        # Ripiego: RSS a zero + fonte abilitata -> provo la news sitemap.
+        # Aggiungitore condiviso dai ripieghi: stessi filtri e stessa dedup del giro RSS.
+        def aggiungi(titolo, link, dt, pos, suffix, dominio=None):
+            titolo = pulisci_titolo(titolo)
+            if not titolo or not link or len(titolo) < 15:
+                return False
+            if MERCATO.search(titolo):
+                return False
+            url_norm = pulisci_url(link)
+            if url_norm in visti_url:
+                return False
+            ktit = chiave_titolo(titolo)
+            if ktit in visti_titolo:
+                return False
+            visti_url.add(url_norm)
+            visti_titolo.add(ktit)
+            articoli.append({
+                "id": hashlib.sha1(url_norm.encode()).hexdigest()[:10],
+                "titolo": titolo,
+                "url": link,
+                "pubblicato": dt.isoformat(),
+                "fonte": nome,
+                "feed": src["name"] + suffix,
+                "dominio": dominio or host_di(link) or src["domain"],
+                "area": area,
+                "primaria": primaria,
+                "ordine_feed": pos,
+                "immagine": None,
+            })
+            return True
+
+        # Ripiego 1: RSS a zero + fonte con "sitemap": true -> news sitemap.
         via_sitemap = 0
         if presi == 0 and src.get("sitemap"):
             try:
-                for pos, (titolo, link, dt) in enumerate(
-                        titoli_da_sitemap(src["domain"], taglio)):
-                    titolo = pulisci_titolo(titolo)
-                    if not titolo or not link or len(titolo) < 15:
-                        continue
-                    if MERCATO.search(titolo):
-                        scartati_mercato += 1
-                        continue
-                    url_norm = pulisci_url(link)
-                    if url_norm in visti_url:
-                        continue
-                    ktit = chiave_titolo(titolo)
-                    if ktit in visti_titolo:
-                        continue
-                    visti_url.add(url_norm)
-                    visti_titolo.add(ktit)
-                    articoli.append({
-                        "id": hashlib.sha1(url_norm.encode()).hexdigest()[:10],
-                        "titolo": titolo,
-                        "url": link,
-                        "pubblicato": dt.isoformat(),
-                        "fonte": nome,
-                        "feed": src["name"] + " (sitemap)",
-                        "dominio": host_di(link) or src["domain"],
-                        "area": area,
-                        "primaria": primaria,
-                        "ordine_feed": pos,
-                        "immagine": None,
-                    })
-                    presi += 1
-                    via_sitemap += 1
+                for pos, (t, l, dt) in enumerate(titoli_da_sitemap(src["domain"], taglio)):
+                    if aggiungi(t, l, dt, pos, " (sitemap)"):
+                        presi += 1
+                        via_sitemap += 1
             except Exception as exc:
                 report.append({"fonte": nome, "area": area, "presi": 0,
                                "nota": "sitemap ko: %s" % str(exc)[:60]})
 
+        # Ripiego 2: ancora zero e non e' un aggregatore -> Google News
+        # (IP di Google, non bloccati). Si spegne con "google_news": false.
+        via_gnews = 0
+        if presi == 0 and area != "AGG" and src.get("google_news", True):
+            try:
+                for pos, (t, l, dt) in enumerate(titoli_da_google_news(src["domain"], taglio)):
+                    if aggiungi(t, l, dt, pos, " (google news)", dominio=src["domain"]):
+                        presi += 1
+                        via_gnews += 1
+            except Exception as exc:
+                report.append({"fonte": nome, "area": area, "presi": 0,
+                               "nota": "google news ko: %s" % str(exc)[:60]})
+
         nota = ""
         if via_sitemap:
             nota = "recuperati %d dalla sitemap (RSS a zero)" % via_sitemap
+        elif via_gnews:
+            nota = "recuperati %d da Google News (RSS a zero)" % via_gnews
         elif presi == 0:
             nota = "feed vivo ma niente nelle ultime %dh" % args.ore if fp.entries else "FEED DA CONTROLLARE"
         report.append({"fonte": nome, "area": area, "presi": presi, "nota": nota})
