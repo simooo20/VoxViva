@@ -1,0 +1,61 @@
+# Genera card social — a richiesta
+#
+# Bottone manuale: scheda "Actions" -> "Genera card social" -> "Run workflow".
+# Prende le notizie del momento, sceglie i confronti piu' divergenti e scrive
+# il CSV per il Bulk Create di Canva. NON ripubblica il sito: ti lascia solo il
+# file da scaricare, in fondo alla pagina del run, sotto "Artifacts" (social-csv).
+#
+# I due campi ti fanno scegliere quanto forti e quante card, senza toccare nulla.
+
+name: Genera card social
+
+on:
+  workflow_dispatch:
+    inputs:
+      soglia:
+        description: "Quanto devono divergere i due lati (0-1). Piu' alto = meno card ma piu' forti"
+        required: false
+        default: "0.65"
+      max:
+        description: "Numero massimo di card"
+        required: false
+        default: "4"
+
+permissions:
+  contents: read
+
+jobs:
+  card:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v5
+
+      - name: Prepara Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Installa le dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Genera il CSV
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
+          ILVAGLIO_MODEL_RAGGRUPPA: ${{ vars.ILVAGLIO_MODEL_RAGGRUPPA || 'claude-haiku-4-5' }}
+          ILVAGLIO_INTENSITA_ALLARME: ${{ vars.ILVAGLIO_INTENSITA_ALLARME || '1.6' }}
+          ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
+          SOGLIA: ${{ inputs.soglia }}
+          MAXCARD: ${{ inputs.max }}
+        run: |
+          python ingest.py --ore 24
+          python cluster.py
+          python genera_social.py --soglia "$SOGLIA" --max "$MAXCARD"
+
+      - name: Consegna il CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: social-csv
+          path: web/social.csv
+          if-no-files-found: warn
