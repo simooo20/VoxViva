@@ -139,27 +139,71 @@ def allarme(titolo: str) -> float:
     return round(INTENSITA_ALLARME * score, 2)
 
 
+def _carica(a, verso_destra=None):
+    """Quanto e' 'forte' un titolo per il suo lato: allarme + spinta all'estremo."""
+    al = allarme(a.get("titolo", ""))
+    idx = INDICE.get(a.get("area"), 2)
+    if verso_destra is True:
+        estremo = idx
+    elif verso_destra is False:
+        estremo = (len(AREE) - 1) - idx
+    else:
+        estremo = 0
+    return al + 0.9 * INTENSITA_ALLARME * estremo
+
+
 def piu_allarmante(articoli, verso_destra=None):
     """Il titolo piu' carico fra quelli dati. A parita' di allarme, sceglie
     quello piu' verso l'estremo indicato (verso_destra=True -> il piu' a destra,
     False -> il piu' a sinistra, None -> il piu' recente)."""
     if not articoli:
         return None
-    def chiave(a):
-        al = allarme(a.get("titolo", ""))
-        idx = INDICE.get(a.get("area"), 2)
-        if verso_destra is True:
-            estremo = idx                      # piu' a destra = piu' estremo
-        elif verso_destra is False:
-            estremo = (len(AREE) - 1) - idx    # piu' a sinistra = piu' estremo
-        else:
-            estremo = 0
-        # la posizione estrema entra NEL punteggio (non solo come spareggio):
-        # cosi' fra due titoli simili vince quello del lato piu' radicale, ma
-        # un titolo davvero urlato batte comunque un radicale spento.
-        carica = al + 0.9 * INTENSITA_ALLARME * estremo
-        return (carica, al, a.get("pubblicato", ""))
-    return max(articoli, key=chiave)
+    return max(articoli, key=lambda a: (_carica(a, verso_destra),
+                                        allarme(a.get("titolo", "")),
+                                        a.get("pubblicato", "")))
+
+
+# Quanto conta la DIVERGENZA (angolazioni diverse) rispetto alla sola loudness
+# nella scelta della coppia sinistra/destra. Alza per titoli piu' contrapposti.
+PESO_DIVERGENZA = float(os.environ.get("ILVAGLIO_PESO_DIVERGENZA", "14"))
+
+_STOP = {"della", "delle", "dello", "degli", "dei", "come", "dopo", "prima",
+         "contro", "senza", "sopra", "sotto", "tra", "fra", "per", "con",
+         "che", "chi", "cosa", "quando", "dove", "perche", "sono", "essere",
+         "anche", "ancora", "mentre", "questo", "questa", "quello", "quella",
+         "loro", "nostro", "tutto", "tutti", "tutte", "ogni", "gli", "una",
+         "uno", "nel", "nella", "sul", "sulla", "dal", "dalla", "alla", "allo"}
+
+
+def _parole(titolo):
+    tok = _re.findall(r"[a-zà-ù]+", (titolo or "").lower())
+    return {t for t in tok if len(t) > 3 and t not in _STOP}
+
+
+def divergenza(a, b):
+    """0 = titoli con le stesse parole, 1 = nessuna parola in comune.
+    Poche parole condivise = angolazioni diverse sullo stesso fatto."""
+    pa, pb = _parole(a), _parole(b)
+    if not pa or not pb:
+        return 1.0
+    return 1.0 - len(pa & pb) / len(pa | pb)
+
+
+def coppia_divergente(sinistra, destra, k=6):
+    """Sceglie la COPPIA (sinistra, destra) che stride di piu'. Prima si tengono
+    i k titoli piu' carichi per lato (garanzia: entrambi forti), poi fra questi
+    si prende la coppia con la MASSIMA divergenza di parole (angolazioni diverse);
+    a parita', la piu' carica. Cosi' si massimizza la differenza TRA i due lati,
+    non la loudness di ciascuno. Costo zero (niente modello)."""
+    if not sinistra or not destra:
+        return (piu_allarmante(sinistra, False), piu_allarmante(destra, True))
+    sx_cand = sorted(sinistra, key=lambda a: _carica(a, False), reverse=True)[:k]
+    dx_cand = sorted(destra, key=lambda a: _carica(a, True), reverse=True)[:k]
+    return max(
+        ((sx, dx) for sx in sx_cand for dx in dx_cand),
+        key=lambda p: (divergenza(p[0].get("titolo", ""), p[1].get("titolo", "")),
+                       _carica(p[0], False) + _carica(p[1], True)),
+    )
 
 
 def riferimento_centro(articoli):

@@ -21,7 +21,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from scala import (AGGREGATORE, AREE, BREVI, COLONNE, INDICE, NOMI,
-                   allarme, ordina_da_sinistra, piu_allarmante)
+                   allarme, ordina_da_sinistra, piu_allarmante, coppia_divergente)
 
 BASE = Path(__file__).resolve().parent
 IN = BASE / "data" / "events.json"
@@ -395,14 +395,13 @@ def meter(area):
 
 
 def rappresentanti(ev):
-    """Un titolo per colonna. A sinistra e a destra si sceglie il piu' ALLARMISTICO
-    (cosi' il contrasto e' massimo, come chiedeva Simone), a parita' quello piu'
-    verso l'estremo. Al centro resta il riferimento neutro d'agenzia."""
+    """Un titolo per colonna. A sinistra e destra si sceglie la COPPIA che stride
+    di piu': entrambi carichi E con angolazioni diverse (massima divergenza tra i
+    due lati, non solo loudness di ciascuno). Al centro il riferimento neutro."""
     sin = ev["per_colonna"].get("sinistra", [])
     cen = ev["per_colonna"].get("centro", [])
     des = ev["per_colonna"].get("destra", [])
-    sx = piu_allarmante(sin, verso_destra=False)      # il piu' urlato a sinistra
-    dx = piu_allarmante(des, verso_destra=True)        # il piu' urlato a destra
+    sx, dx = coppia_divergente(sin, des)
     rif = ev.get("riferimento") or (cen[0] if cen else None)
     return sx, rif, dx
 
