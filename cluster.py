@@ -85,7 +85,7 @@ MODELLO = os.environ.get("ILVAGLIO_MODEL", "claude-haiku-4-5")
 # Il tetto giornaliero fa comunque da rete. Per tornare al risparmio massimo
 # (a costo di qualche merge urlato perso) basta la variabile, senza toccare il
 # codice:  ILVAGLIO_MODEL_RAGGRUPPA=claude-haiku-4-5
-MODELLO_RAGGRUPPA = os.environ.get("ILVAGLIO_MODEL_RAGGRUPPA", "claude-sonnet-4-5")
+MODELLO_RAGGRUPPA = os.environ.get("ILVAGLIO_MODEL_RAGGRUPPA", "claude-haiku-4-5")
 
 # --- TETTO DI SPESA GIORNALIERO -------------------------------------------
 # Limite in DOLLARI al giorno sulle chiamate API di questo progetto (i prezzi
@@ -94,7 +94,7 @@ MODELLO_RAGGRUPPA = os.environ.get("ILVAGLIO_MODEL_RAGGRUPPA", "claude-sonnet-4-
 # tetto e' gia' esaurito a inizio giro il giro viene saltato del tutto e resta
 # online l'ultima versione pubblicata (nessun sito vuoto).
 # Si cambia senza toccare il codice con la variabile ILVAGLIO_TETTO_USD.
-TETTO_SPESA_USD = float(os.environ.get("ILVAGLIO_TETTO_USD", "0.33"))
+TETTO_SPESA_USD = float(os.environ.get("ILVAGLIO_TETTO_USD", "0"))  # 0 = nessun tetto
 
 # Prezzi per milione di token (input, output). Verificati a settembre 2026.
 # Se il modello non e' in tabella si usa il prezzo di Sonnet (prudenziale).
@@ -718,12 +718,13 @@ def main():
     client = client_anthropic()
 
     global BUDGET
-    BUDGET = Budget(TETTO_SPESA_USD)
-    if BUDGET.resta() <= 0:
-        sys.exit("Tetto di spesa raggiunto: %.2f USD gia' spesi oggi (tetto %.2f). "
-                 "Salto il giro; resta online l'ultima versione pubblicata."
-                 % (BUDGET.totale, BUDGET.tetto))
-    print("Budget di oggi: spesi %.3f USD, tetto %.2f USD." % (BUDGET.totale, BUDGET.tetto))
+    BUDGET = Budget(TETTO_SPESA_USD) if TETTO_SPESA_USD > 0 else None
+    if BUDGET is not None:
+        if BUDGET.resta() <= 0:
+            sys.exit("Tetto di spesa raggiunto: %.2f USD gia' spesi oggi (tetto %.2f). "
+                     "Salto il giro; resta online l'ultima versione pubblicata."
+                     % (BUDGET.totale, BUDGET.tetto))
+        print("Budget di oggi: spesi %.3f USD, tetto %.2f USD." % (BUDGET.totale, BUDGET.tetto))
 
     try:
         eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))

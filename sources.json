@@ -47,9 +47,9 @@
       "name": "Il Manifesto",
       "domain": "ilmanifesto.it",
       "area": "SR",
-      "rss": "https://ilmanifesto.it/feed/",
+      "rss": "https://cms.ilmanifesto.it/feed",
       "proprieta": "cooperativa di giornalisti",
-      "stato": "url aggiornato",
+      "stato": "url cms diretto",
       "nota": "Si autodefinisce 'quotidiano comunista' nella descrizione del feed. Il feed disponibile contiene l'edizione cartacea (cultura, spettacoli) con 1-2 giorni di ritardo: per il confronto sui titoli del giorno serve un feed di cronaca. cms.ilmanifesto.it/sezione/politica/feed esiste ma torna vuoto."
     },
     {
