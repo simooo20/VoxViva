@@ -401,8 +401,10 @@ def main():
                 report.append({"fonte": nome, "area": area, "presi": 0,
                                "nota": "sitemap ko: %s" % str(exc)[:60]})
 
-        # Ripiego 2: ancora zero e non e' un aggregatore -> Google News
-        # (IP di Google, non bloccati). Si spegne con "google_news": false.
+        # Ripiego 2: Google News per le testate a zero (Fanpage ecc.). Scatta
+        # solo se l'RSS di quella fonte non ha dato nulla, quindi non tocca i
+        # feed che funzionano (ANSA/AGI restano ricchi). Si spegne per fonte
+        # con "google_news": false.
         via_gnews = 0
         if presi == 0 and area != "AGG" and src.get("google_news", True):
             try:

@@ -442,24 +442,50 @@ def raggruppa(client, articoli, ore):
     # Tetto alto: teniamo tutti i lati E abbondante centro, cosi' nessuna
     # colonna resta a secco. (Con un tetto basso, tenere tutti i lati finiva
     # per tagliare troppo il centro, che diventava la colonna mancante.)
+    # Selezione BILANCIATA: un terzo sinistra, un terzo centro, un terzo destra.
+    # Prima era "tutti i lati + riempi col centro": quando i lati sono tanti
+    # (es. con Google News) il centro veniva schiacciato fuori dal pool e i
+    # confronti a 3 colonne non si formavano. Ora ogni colonna ha la sua quota,
+    # gli estremi scarsi (SR/DR) entrano per primi, e il surplus di una colonna
+    # corta va alle altre (non si spreca il tetto).
     MAX_ART = 850
     if len(articoli) > MAX_ART:
-        prim_ids = {id(a) for a in articoli if a.get("primaria")}
-        prim = [a for a in articoli if id(a) in prim_ids]
-        lati = [a for a in articoli if id(a) not in prim_ids
-                and a.get("area") in ("SR", "CS", "CD", "DR")]
-        centro = [a for a in articoli if id(a) not in prim_ids and a.get("area") == "C"]
-        centro.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
-        tenuti = prim + lati
-        if len(tenuti) < MAX_ART:
-            tenuti += centro[: MAX_ART - len(tenuti)]
-        else:
-            tenuti.sort(key=lambda a: a.get("pubblicato", ""), reverse=True)
-            tenuti = tenuti[:MAX_ART]
-        n_lati = sum(1 for a in tenuti if a.get("area") in ("SR", "CS", "CD", "DR"))
-        print("  troppi articoli (%d): raggruppo i %d piu' rilevanti "
-              "(agenda + TUTTI i %d lati + centro recente)"
-              % (len(articoli), len(tenuti), n_lati))
+        prim = [a for a in articoli if a.get("primaria")]
+        prim_ids = {id(a) for a in prim}
+        resto = [a for a in articoli if id(a) not in prim_ids]
+
+        def _recenti(pool, estremi):
+            est = sorted((a for a in pool if a.get("area") in estremi),
+                         key=lambda a: a.get("pubblicato", ""), reverse=True)
+            mod = sorted((a for a in pool if a.get("area") not in estremi),
+                         key=lambda a: a.get("pubblicato", ""), reverse=True)
+            return est + mod          # gli estremi (merce scarsa) non li perdiamo
+
+        colonne = [
+            _recenti([a for a in resto if a.get("area") in ("SR", "CS")], {"SR"}),
+            _recenti([a for a in resto if a.get("area") == "C"], set()),
+            _recenti([a for a in resto if a.get("area") in ("CD", "DR")], {"DR"}),
+        ]
+        budget = MAX_ART - len(prim)
+        quote = [0, 0, 0]
+        assegnati = 0
+        while assegnati < budget and any(quote[i] < len(colonne[i]) for i in range(3)):
+            for i in range(3):
+                if assegnati >= budget:
+                    break
+                if quote[i] < len(colonne[i]):
+                    quote[i] += 1
+                    assegnati += 1
+
+        tenuti = list(prim)
+        for c, q in zip(colonne, quote):
+            tenuti += c[:q]
+
+        n_c = sum(1 for a in tenuti if a.get("area") == "C")
+        n_l = sum(1 for a in tenuti if a.get("area") in ("SR", "CS", "CD", "DR"))
+        print("  troppi articoli (%d): raggruppo i %d bilanciati "
+              "(%d lati + %d centro + agenda)"
+              % (len(articoli), len(tenuti), n_l, n_c))
         articoli = tenuti
     # Al modello NON serve l'id vero (sha1 da 10 caratteri): gli basta
     # un'etichetta corta per indicare i titoli. Usiamo un indice progressivo
