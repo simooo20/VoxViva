@@ -1,19 +1,16 @@
 # VoxViva — aggiornamento automatico del sito
 #
-# Cosa fa: una volta al giorno (e ogni volta che lo lanci a mano) rigira la
+# Cosa fa: due volte al giorno (e ogni volta che lo lanci a mano) rigira la
 # pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce la
 # pagina, genera il CSV delle card social — e pubblica su GitHub Pages.
-#
-# Il visitatore vede sempre un sito normale, aggiornato: il lavoro avviene
-# qui dietro, non sul suo schermo.
 
 name: Aggiorna VoxViva
 
 on:
-  # UN giro al giorno: le 06:00 UTC = 08:00 ora italiana d'estate (07:00 d'inverno).
-  # Per tornare a piu' giri: "0 22,6,14 * * *" = ogni 8h | "0 22,4,10,16 * * *" = ogni 6h.
+  # DUE giri al giorno: 06:00 e 18:00 UTC = 08:00 e 20:00 ora italiana d'estate.
+  # Per cambiare: "0 6 * * *" = 1 giro | "0 22,6,14 * * *" = 3 giri (ogni 8h).
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 6,18 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
 
