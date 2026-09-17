@@ -1,21 +1,19 @@
-# Il Vaglio — aggiornamento automatico del sito
+# VoxViva — aggiornamento automatico del sito
 #
-# Cosa fa: ogni 30 minuti (e ogni volta che lo lanci a mano) rigira la
-# pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce
-# la pagina — e pubblica il risultato su GitHub Pages.
+# Cosa fa: una volta al giorno (e ogni volta che lo lanci a mano) rigira la
+# pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce la
+# pagina, genera il CSV delle card social — e pubblica su GitHub Pages.
 #
-# Il visitatore vede sempre un sito normale, sempre aggiornato: il lavoro
-# avviene qui dietro, non sul suo schermo.
+# Il visitatore vede sempre un sito normale, aggiornato: il lavoro avviene
+# qui dietro, non sul suo schermo.
 
 name: Aggiorna VoxViva
 
 on:
-  # MODALITA' ECONOMICA: 3 giri al giorno (ogni 8 ore), alle 00:00 / 08:00 / 16:00
-  # ORA ITALIANA (estate). GitHub usa UTC, quindi qui sono 22 / 06 / 14.
-  # In inverno (ora solare) scaleranno di un'ora in Italia. Va bene lo stesso.
-  # Per cambiare: "0 22,6,14 * * *" = ogni 8h | "0 22,4,10,16 * * *" = ogni 6h.
+  # UN giro al giorno: le 06:00 UTC = 08:00 ora italiana d'estate (07:00 d'inverno).
+  # Per tornare a piu' giri: "0 22,6,14 * * *" = ogni 8h | "0 22,4,10,16 * * *" = ogni 6h.
   schedule:
-    - cron: "0 22,6,14 * * *"
+    - cron: "0 6 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
 
@@ -52,12 +50,19 @@ jobs:
       - name: Rigenera la pagina
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # opzionale: cambia il modello senza toccare il codice
+          # manopole opzionali: si regolano da Settings > Variables, senza toccare il codice
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
+          ILVAGLIO_MODEL_RAGGRUPPA: ${{ vars.ILVAGLIO_MODEL_RAGGRUPPA || 'claude-haiku-4-5' }}
+          ILVAGLIO_INTENSITA_ALLARME: ${{ vars.ILVAGLIO_INTENSITA_ALLARME || '1.6' }}
+          ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
+          ILVAGLIO_TETTO_USD: ${{ vars.ILVAGLIO_TETTO_USD || '0' }}
+          ILVAGLIO_SOGLIA_DIVERGENZA: ${{ vars.ILVAGLIO_SOGLIA_DIVERGENZA || '0.65' }}
+          ILVAGLIO_MAX_SOCIAL: ${{ vars.ILVAGLIO_MAX_SOCIAL || '4' }}
         run: |
           python ingest.py --ore 24
           python cluster.py
           python render.py --max 15
+          python genera_social.py
 
       - name: Configura Pages
         uses: actions/configure-pages@v5
