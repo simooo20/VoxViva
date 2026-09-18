@@ -44,6 +44,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
           ILVAGLIO_MODEL_RAGGRUPPA: ${{ vars.ILVAGLIO_MODEL_RAGGRUPPA || 'claude-haiku-4-5' }}
+          # Batch API: 50% di sconto. 1 = acceso, 0 = chiamate dirette (piu' veloci)
+          ILVAGLIO_BATCH: ${{ vars.ILVAGLIO_BATCH || '1' }}
           ILVAGLIO_INTENSITA_ALLARME: ${{ vars.ILVAGLIO_INTENSITA_ALLARME || '1.6' }}
           ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
           SOGLIA: ${{ inputs.soglia }}
