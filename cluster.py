@@ -386,6 +386,41 @@ def client_anthropic():
     return anthropic.Anthropic()
 
 
+# --- Batch API: stesso lavoro, meta' del costo ------------------------------
+# La Batch API costa il 50% in meno su input e output. Non e' istantanea: si
+# invia la richiesta e si aspetta che il batch finisca (di solito pochi minuti).
+# La pipeline gira su schedule due volte al giorno, quindi qualche minuto in
+# piu' non si nota. Si spegne con ILVAGLIO_BATCH=0 (torna alle chiamate dirette).
+USA_BATCH = os.environ.get("ILVAGLIO_BATCH", "1").strip().lower() not in ("0", "false", "no", "")
+BATCH_POLL = int(os.environ.get("ILVAGLIO_BATCH_POLL", "20"))         # secondi tra un controllo e l'altro
+BATCH_TIMEOUT = int(os.environ.get("ILVAGLIO_BATCH_TIMEOUT", "2400"))  # attesa massima per batch (40 min)
+
+
+def _invia_sync(client, params):
+    return client.messages.create(**params)
+
+
+def _invia_batch(client, params):
+    """Manda una singola richiesta come batch (50% di sconto) e aspetta l'esito."""
+    batch = client.messages.batches.create(
+        requests=[{"custom_id": "r", "params": params}])
+    atteso = 0
+    while True:
+        stato = client.messages.batches.retrieve(batch.id)
+        if stato.processing_status == "ended":
+            break
+        if atteso >= BATCH_TIMEOUT:
+            raise RuntimeError("batch non concluso entro %d s" % BATCH_TIMEOUT)
+        time.sleep(BATCH_POLL)
+        atteso += BATCH_POLL
+    for r in client.messages.batches.results(batch.id):
+        res = r.result
+        if res.type == "succeeded":
+            return res.message
+        raise RuntimeError("batch: risultato %s" % res.type)
+    raise RuntimeError("batch senza risultati")
+
+
 def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
     # L'API ogni tanto risponde con un errore momentaneo (sovraccarico, limite,
     # timeout): non deve buttare giu' l'intero giro. Riproviamo qualche volta con
@@ -398,15 +433,16 @@ def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
             "tetto giornaliero di %.2f USD raggiunto (spesi %.2f oggi)"
             % (BUDGET.tetto, BUDGET.totale))
     ultimo = None
+    params = {
+        "model": modello,
+        "max_tokens": max_tokens,
+        "tools": [schema],
+        "tool_choice": {"type": "tool", "name": schema["name"]},
+        "messages": [{"role": "user", "content": prompt}],
+    }
     for i in range(tentativi):
         try:
-            risposta = client.messages.create(
-                model=modello,
-                max_tokens=max_tokens,
-                tools=[schema],
-                tool_choice={"type": "tool", "name": schema["name"]},
-                messages=[{"role": "user", "content": prompt}],
-            )
+            risposta = (_invia_batch if USA_BATCH else _invia_sync)(client, params)
             for blocco in risposta.content:
                 if blocco.type == "tool_use":
                     if BUDGET is not None:
