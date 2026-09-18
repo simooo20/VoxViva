@@ -128,7 +128,7 @@ a:hover{color:var(--accent)}
 
 /* ---------- testata ---------- */
 header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22px 0 16px}
-.brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
 .brand h1{font-family:var(--display);font-weight:700;font-size:46px;line-height:.95;margin:0;letter-spacing:-.035em}
 .brand .tag{font-size:14px;color:var(--ink-3)}
 .claim{font-family:var(--serif);font-size:16px;line-height:1.35;color:var(--ink-2);
@@ -360,8 +360,7 @@ def ora_it(iso, riferimento=None):
 def data_lunga(iso):
     try:
         d = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(ROMA)
-        return "%s %d %s %d, ore %s" % (GIORNI[d.weekday()], d.day, MESI[d.month - 1], d.year,
-                                        d.strftime("%H:%M"))
+        return "%d %s %d, %s" % (d.day, MESI[d.month - 1], d.year, d.strftime("%H:%M"))
     except Exception:
         return ""
 
@@ -633,11 +632,9 @@ def main():
   italiana &egrave; messa accanto a se stessa, dal titolo pi&ugrave; a sinistra a quello pi&ugrave;
   a destra, col lancio d'agenzia in mezzo. Nessun titolo &egrave; riscritto.</p>
   <div class="scala">%(scala)s</div>
-  <p class="scala-nota">La scala corre da sinistra a destra come la leggeresti su carta:
-  conta solo la posizione, dall'estremo pi&ugrave; a sinistra a quello pi&ugrave; a destra.</p>
   %(avviso)s
   <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">
-    Ultimo aggiornamento: %(agg)s &middot; finestra: ultime %(ore)d ore
+    Aggiornato %(agg)s &middot; ultime %(ore)d ore
   </p>
 </div></header>
 
@@ -649,17 +646,20 @@ def main():
   <div class="fcols">
     <div>
       <h4>Come funziona</h4>
-      <p>Ogni ora leggiamo i feed RSS delle testate monitorate. Un modello linguistico
-      raggruppa i titoli che parlano dello stesso fatto &mdash; non per parole in comune,
-      ma per contenuto: &egrave; il punto, dato che le parole sono proprio la cosa che cambia.</p>
-      <p>Le <b>principali</b> non le scegliamo noi: sono le notizie che l'agenzia ANSA ha
-      messo in prima pagina e che almeno un giornale ha ripreso, nell'ordine dell'agenzia.
-      Cos&igrave; l'agenda del giorno &egrave; neutrale. Pubblichiamo una notizia solo se
-      &egrave; coperta da tutte e tre le aree: sinistra, centro e destra.</p>
-      <p>Quando raggruppa, il modello non vede la posizione politica delle testate. E non
-      riscrive mai i titoli: restituisce solo dei riferimenti. I titoli che leggi sono quelli
-      pubblicati dalle testate, alla lettera. Il titolo neutro dell'evento e la nota
-      &laquo;come cambia il racconto&raquo; sono invece testo nostro.</p>
+      <p>Dietro il sito c'&egrave; un software automatico, costruito con l'intelligenza
+      artificiale di <b>Claude</b> (Anthropic). Due volte al giorno legge i feed RSS delle
+      testate italiane e un modello linguistico raggruppa i titoli che parlano dello stesso
+      fatto &mdash; non per parole in comune, ma per contenuto: &egrave; il punto, dato che
+      le parole sono proprio la cosa che cambia da un lato all'altro.</p>
+      <p>Lo stesso modello scrive il titolo neutro dell'evento e la nota &laquo;come cambia
+      il racconto&raquo;, e mette davanti le notizie dove il racconto diverge di pi&ugrave;
+      tra destra e sinistra. I titoli delle colonne, invece, non vengono <b>mai</b> riscritti:
+      sono quelli pubblicati dalle testate, alla lettera.</p>
+      <p>Le <b>principali</b> non le sceglie una redazione: sono le notizie che l'agenzia ANSA
+      ha messo in prima pagina e che almeno un giornale ha ripreso. Cos&igrave; l'agenda del
+      giorno resta neutrale. Una notizia si pubblica solo se &egrave; coperta da tutte e tre
+      le aree &mdash; sinistra, centro e destra &mdash; e quando raggruppa, il modello non
+      vede la posizione politica delle testate.</p>
     </div>
     <div>
       <h4>Le etichette</h4>
