@@ -127,19 +127,19 @@ a{color:inherit;text-decoration:none}
 a:hover{color:var(--accent)}
 
 /* ---------- testata ---------- */
-header.top{background:var(--card);border-bottom:1px solid var(--line);padding:38px 0 30px}
+header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22px 0 16px}
 .brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .brand h1{font-family:var(--display);font-weight:700;font-size:46px;line-height:.95;margin:0;letter-spacing:-.035em}
 .brand .tag{font-size:14px;color:var(--ink-3)}
-.claim{font-family:var(--serif);font-size:20px;line-height:1.45;color:var(--ink-2);
-  margin:18px 0 0;max-width:64ch}
+.claim{font-family:var(--serif);font-size:16px;line-height:1.35;color:var(--ink-2);
+  margin:10px 0 0;max-width:60ch}
 .stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 .stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:92px}
 .stat b{display:block;font-size:23px;font-family:var(--display);font-weight:700;line-height:1.1;letter-spacing:-.02em}
 .stat span{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
 
 /* legenda della scala */
-.scala{display:flex;gap:0;margin-top:24px;border-radius:7px;overflow:hidden;
+.scala{display:flex;gap:0;margin-top:12px;border-radius:7px;overflow:hidden;
   border:1px solid var(--line);max-width:760px}
 .scala div{flex:1;padding:8px 10px;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.05em;text-align:center;font-weight:700;line-height:1.3}
@@ -148,7 +148,7 @@ header.top{background:var(--card);border-bottom:1px solid var(--line);padding:38
 .scala .s-C{background:var(--C-bg);color:var(--C)}
 .scala .s-CD{background:var(--CD-bg);color:var(--CD)}
 .scala .s-DR{background:var(--DR-bg);color:var(--DR)}
-.scala-nota{font-size:12px;color:var(--ink-3);margin:8px 0 0;max-width:760px}
+.scala-nota{font-size:11px;color:var(--ink-3);margin:6px 0 0;max-width:760px}
 
 .avviso{background:#fff8e1;border:1px solid #f0dfa8;border-radius:8px;
   padding:13px 16px;margin:24px 0 0;font-size:13.5px;color:#6b5514}
@@ -331,7 +331,7 @@ footer .fonti{font-size:12.5px;color:var(--ink-3);line-height:1.7}
   .col{border-right:0;border-bottom:1px solid var(--line-2)}
   .col:last-child{border-bottom:0}
   .fcols{grid-template-columns:1fr;gap:24px}
-  .brand h1{font-size:32px} .claim{font-size:17px}
+  .brand h1{font-size:30px} .claim{font-size:15px}
   .scala div{font-size:9px;padding:7px 4px}
 }
 """
@@ -636,7 +636,7 @@ def main():
   <p class="scala-nota">La scala corre da sinistra a destra come la leggeresti su carta:
   conta solo la posizione, dall'estremo pi&ugrave; a sinistra a quello pi&ugrave; a destra.</p>
   %(avviso)s
-  <p style="margin:22px 0 0;font-size:13px;color:var(--ink-3)">
+  <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">
     Ultimo aggiornamento: %(agg)s &middot; finestra: ultime %(ore)d ore
   </p>
 </div></header>

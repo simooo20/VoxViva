@@ -512,8 +512,13 @@ def raggruppa(client, articoli, ore):
 
     eventi, usati = [], set()
     for ev in dati.get("eventi", []):
+        if not isinstance(ev, dict):
+            continue                      # output malformato del modello: lo salto
+        ids = ev.get("ids")
+        if not isinstance(ids, list):
+            continue
         membri = []
-        for i in ev.get("ids", []):
+        for i in ids:
             k = str(i)
             if k in per_key and k not in usati:
                 membri.append(per_key[k])

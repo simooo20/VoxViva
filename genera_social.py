@@ -98,7 +98,8 @@ def main():
     if not IN.exists():
         print("Manca data/events.json: salto la generazione social.")
         return
-    eventi = json.loads(IN.read_text(encoding="utf-8"))
+    dati = json.loads(IN.read_text(encoding="utf-8"))
+    eventi = dati["eventi"] if isinstance(dati, dict) else dati
 
     # candidati: confronti completi, ordinati per divergenza dei due lati scelti
     cand = []
