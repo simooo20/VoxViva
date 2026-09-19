@@ -17,7 +17,7 @@ di Canva: colleghi le colonne ai segnaposto del template e sforni tutte le card.
 
 Manopole (anche da Settings > Variables, senza toccare il codice):
     ILVAGLIO_SOGLIA_DIVERGENZA   quanto devono divergere i due lati (default 0.65)
-    ILVAGLIO_MAX_SOCIAL          quante card al massimo per giro (default 4)
+    ILVAGLIO_MAX_SOCIAL          quante card al massimo per giro (default 2)
 """
 import argparse
 import csv
@@ -34,7 +34,7 @@ IN = BASE / "data" / "events.json"
 OUT = BASE / "web" / "social.csv"
 
 SOGLIA = float(os.environ.get("ILVAGLIO_SOGLIA_DIVERGENZA", "0.65"))
-MAX_CARD = int(os.environ.get("ILVAGLIO_MAX_SOCIAL", "4"))
+MAX_CARD = int(os.environ.get("ILVAGLIO_MAX_SOCIAL", "2"))
 
 SCHEMA_SOCIAL = {
     "name": "registra_card",
@@ -45,11 +45,11 @@ SCHEMA_SOCIAL = {
             "sintesi": {"type": "string",
                         "description": "2-3 frasi brevi separate da ';', ognuna dice cosa sottolinea un lato. Neutra, in terza persona. Nomina le testate."},
             "sx_estratto": {"type": "string",
-                            "description": "Estratto breve del titolo di SINISTRA, che inizia con '…', di senso compiuto, max ~12 parole, col suo tono."},
+                            "description": "Estratto social del titolo di SINISTRA: frase secca e d'impatto, max ~12 parole, col tono di quel lato. NON iniziare con puntini di sospensione."},
             "centro_estratto": {"type": "string",
-                                "description": "Estratto breve del titolo di CENTRO, inizia con '…', asciutto, max ~12 parole."},
+                                "description": "Estratto social del titolo di CENTRO: frase secca, asciutta, max ~12 parole. NON iniziare con puntini di sospensione."},
             "dx_estratto": {"type": "string",
-                            "description": "Estratto breve del titolo di DESTRA, inizia con '…', di senso compiuto, max ~12 parole, col suo tono."},
+                            "description": "Estratto social del titolo di DESTRA: frase secca e d'impatto, max ~12 parole, col tono di quel lato. NON iniziare con puntini di sospensione."},
             "caption": {"type": "string",
                         "description": "Didascalia del post: 2-3 frasi, neutra, chiude con un gancio che invita a leggere l'analisi. Niente hashtag."},
         },
@@ -67,7 +67,7 @@ I titoli VERI, come pubblicati:
 - DESTRA ({dx_fonte}): {dx_titolo}
 
 Scrivi i testi per la card (chiama registra_card):
-- Gli ESTRATTI sono versioni accorciate dei titoli veri: taglia solo il ridondante (quello gia' detto nel titolo neutro), tieni il TONO di quel lato, e falli restare frasi DI SENSO COMPIUTO (non tronconi a meta'). Ognuno inizia con '…'.
+- Gli ESTRATTI sono la versione social del titolo di ogni lato: una frase secca e d'impatto, col TONO di quel lato, di senso compiuto (non tronconi). NON iniziano con puntini di sospensione.
 - Non inventare fatti: usa solo cio' che c'e' nel titolo di quel lato.
 - La SINTESI dice in modo neutro cosa sottolinea ciascun lato, nominando le testate.
 - La CAPTION e' per Instagram: neutra, incuriosisce, chiude invitando a leggere l'analisi. Niente hashtag, niente maiuscole urlate."""
@@ -85,6 +85,11 @@ def rappresentanti(ev):
 
 def completo(ev):
     return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
+
+
+def _senza_puntini(s):
+    """Toglie eventuali puntini di sospensione iniziali dagli estratti."""
+    return (s or "").strip().lstrip("….").strip()
 
 
 def main():
@@ -152,9 +157,9 @@ def main():
                 continue
             base.update({
                 "sintesi": (dati.get("sintesi") or "").strip(),
-                "sx_estratto": (dati.get("sx_estratto") or "").strip(),
-                "centro_estratto": (dati.get("centro_estratto") or "").strip(),
-                "dx_estratto": (dati.get("dx_estratto") or "").strip(),
+                "sx_estratto": _senza_puntini(dati.get("sx_estratto")),
+                "centro_estratto": _senza_puntini(dati.get("centro_estratto")),
+                "dx_estratto": _senza_puntini(dati.get("dx_estratto")),
                 "caption": (dati.get("caption") or "").strip(),
             })
         righe.append(base)
