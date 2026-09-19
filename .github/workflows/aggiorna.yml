@@ -56,7 +56,7 @@ jobs:
           ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
           ILVAGLIO_TETTO_USD: ${{ vars.ILVAGLIO_TETTO_USD || '0' }}
           ILVAGLIO_SOGLIA_DIVERGENZA: ${{ vars.ILVAGLIO_SOGLIA_DIVERGENZA || '0.65' }}
-          ILVAGLIO_MAX_SOCIAL: ${{ vars.ILVAGLIO_MAX_SOCIAL || '4' }}
+          ILVAGLIO_MAX_SOCIAL: ${{ vars.ILVAGLIO_MAX_SOCIAL || '2' }}
         run: |
           python ingest.py --ore 24
           python cluster.py

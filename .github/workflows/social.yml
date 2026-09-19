@@ -19,7 +19,7 @@ on:
       max:
         description: "Numero massimo di card"
         required: false
-        default: "4"
+        default: "2"
 
 permissions:
   contents: read
