@@ -101,6 +101,39 @@ MERCATO = re.compile(
 )
 
 
+# Rumore senza "lati": risultati sportivi, cinema/TV, gossip, oroscopo. Su questa
+# roba non esiste una lettura di sinistra/centro/destra: se il Milan vince 2-0 lo
+# scrivono uguali tutti. Si scarta al volo, prima di spendere token a raggrupparla.
+# NB: e' volutamente una lista di FORMATI inerti (punteggi, box office, nomi da
+# rotocalco), non di TEMI: cosi' una notizia sportiva o culturale che diventa
+# POLITICA (stadio e soldi pubblici, doping-geopolitica, un monologo a Sanremo)
+# NON casca qui per una parola, e la prende semmai il filtro divergenza a valle.
+# E' una semplice lista: aggiungi o togli parole a piacere.
+RUMORE = re.compile(
+    r"("
+    # --- calcio e risultati ---
+    r"\bserie a\b|\bserie b\b|champions league|europa league|conference league|"
+    r"\bgol\b|doppietta|tripletta|autogol|calciomercato|moviola|\bvar\b|"
+    r"capocannoniere|probabili formazioni|formazioni ufficiali|"
+    # --- ciclismo ---
+    r"giro d'italia|tour de france|\bvuelta\b|maglia rosa|maglia gialla|cronometro|"
+    r"\b\d{1,2}(a|\u00aa)? tappa\b|"
+    # --- motori / tennis / basket ---
+    r"gran premio|pole position|\bmotogp\b|formula 1|"
+    r"tie[- ]?break|\batp\b|\bwta\b|\bnba\b|\beurolega\b|"
+    # --- cinema / tv / spettacolo ---
+    r"box office|\bal cinema\b|\brecensione\b|\btrailer\b|ascolti tv|\bspoiler\b|"
+    r"grande fratello|isola dei famosi|uomini e donne|amici di maria|\bpuntata\b|"
+    # --- gossip ---
+    r"\bgossip\b|paparazz|\bflirt\b|beccati insieme|\bbelen\b|bel\u00e9n|wanda nara|"
+    # --- oroscopo / meteo-chiacchiera ---
+    r"oroscopo|segno zodiacale|previsioni meteo|che tempo (fa|far\u00e0)"
+    r")",
+    re.I,
+)
+
+
+
 def pulisci_url(url: str) -> str:
     """Toglie i parametri di tracciamento e normalizza l'host, per deduplicare bene."""
     try:
@@ -301,6 +334,7 @@ def main():
     visti_url, visti_titolo = set(), set()
     report = []
     scartati_mercato = 0
+    scartati_rumore = 0
 
     for src in sources:
         nome = src.get("etichetta") or src["name"]   # ANSA cronaca -> "ANSA"
@@ -326,6 +360,10 @@ def main():
 
             if MERCATO.search(titolo):
                 scartati_mercato += 1
+                continue
+
+            if RUMORE.search(titolo):
+                scartati_rumore += 1
                 continue
 
             dt = data_di(e)
@@ -365,6 +403,8 @@ def main():
             if not titolo or not link or len(titolo) < 15:
                 return False
             if MERCATO.search(titolo):
+                return False
+            if RUMORE.search(titolo):
                 return False
             url_norm = pulisci_url(link)
             if url_norm in visti_url:
@@ -445,6 +485,8 @@ def main():
     print("  di cui dalla spina dorsale (topnews agenzia): %d" % primari)
     if scartati_mercato:
         print("  tick di mercato scartati (oro, petrolio, borsa...): %d" % scartati_mercato)
+    if scartati_rumore:
+        print("  rumore senza lati scartato (sport, tv, gossip, oroscopo): %d" % scartati_rumore)
     muti = [r["fonte"] for r in report if r["presi"] == 0]
     if muti:
         print("  fonti a zero: %s" % ", ".join(muti))

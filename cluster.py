@@ -32,7 +32,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
-                   estremi, ordina_da_sinistra, riferimento_centro)
+                   coppia_divergente, estremi, ordina_da_sinistra,
+                   riferimento_centro)
 
 import re as _re
 import urllib.request
@@ -343,6 +344,10 @@ SCHEMA_ANALIZZA = {
 PROMPT_ANALIZZA = """Per ognuno di questi eventi ti do i titoli con cui testate di orientamento diverso lo hanno raccontato. L'etichetta fra parentesi quadre indica la posizione della testata su una scala a cinque: sinistra radicale, centro-sinistra, centro e agenzie, centro-destra, destra radicale.
 
 Per ogni evento produci: quanto diverge l'inquadratura, una frase secca sul duello fra i due estremi, e una nota di tre o quattro frasi che confronta come le diverse testate RACCONTANO la stessa notizia — nel titolo E nel corpo del pezzo (quando c'è l'estratto).
+
+**ANCORAGGIO — la cosa più importante.** Ogni evento ti arriva con TRE titoli marcati «IN COLONNA (sinistra/centro/destra)»: sono gli UNICI tre che il lettore vede a schermo, uno per colonna. La nota si costruisce SU QUESTI TRE. Quando parli di una colonna, il taglio che le attribuisci deve essere quello del suo titolo mostrato: non descrivere «il centro» con un'inquadratura che il titolo di centro mostrato NON ha (se il centro mostrato apre sul risultato A, non scrivere che il centro apre sul risultato B). Puoi — anzi devi — dare la pluralità citando altre testate del gruppo («anche Il Post…», «le altre agenzie…»), ma come contorno: la spina dorsale restano i tre titoli in colonna, e nessuna frase deve contraddire ciò che si vede. Se un titolo mostrato è l'eccezione rispetto al resto del suo lato, dillo esplicitamente invece di ignorarlo.
+
+**Un'idea di lettura, non una lista.** La nota deve dare al lettore UN filo: qual è l'asse su cui i tre titoli divergono (chi mettono al centro, quale risultato scelgono come principale, cosa tacciono) e come ci si muove da un lato all'altro. Non un elenco slegato di scarti: un racconto breve e ordinato di come cambia l'inquadratura passando da sinistra al centro alla destra.
 
 REGOLA D'ORO — devi essere TOTALMENTE IMPARZIALE. La nota «come cambia il racconto» descrive SOLO le differenze oggettive, verificabili nel testo dei titoli e degli estratti. È un referto, non un commento. Vietato:
 - dire o insinuare che una testata mente, è in malafede, manipola o inganna;
@@ -713,10 +718,30 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
                        # (metti 8-10 per riattivare la lettura sui confronti in cima)
     cache_incipit = {}
     for n, (_, ev) in enumerate(candidati, 1):
+        # I TRE titoli che finiranno DAVVERO in colonna (gli stessi che sceglie
+        # render.py): la nota va costruita su questi, non su un titolo qualunque
+        # del mucchio, o descrive una colonna e il sito ne mostra un'altra.
+        sx, dx = coppia_divergente(ev["per_colonna"].get("sinistra", []),
+                                   ev["per_colonna"].get("destra", []))
+        rif = ev.get("riferimento")
+        mostrati = {}
+        for art, col in ((sx, "sinistra"), (rif, "centro"), (dx, "destra")):
+            if art:
+                mostrati[(art.get("fonte"), art.get("titolo"))] = col
+        trio = []
+        for art, col in ((sx, "SINISTRA"), (rif, "CENTRO"), (dx, "DESTRA")):
+            if art:
+                trio.append('  %s -> %s: "%s"' % (col, art.get("fonte"), art.get("titolo")))
         righe = ["Evento %d - %s" % (n, ev["titolo_neutro"])]
+        if trio:
+            righe.append("  >>> TITOLI MOSTRATI IN COLONNA (su questi va costruita la nota):")
+            righe.extend(trio)
+            righe.append("  --- tutti i titoli del gruppo (per la pluralità) ---")
         # solo le testate con una linea: l'aggregatore non e' una voce da analizzare
         for a in ordina_da_sinistra([x for x in ev["articoli"] if x.get("area") in AREE]):
-            righe.append('  [%s] %s: "%s"' % (NOMI[a["area"]], a["fonte"], a["titolo"]))
+            marca = mostrati.get((a["fonte"], a["titolo"]))
+            tag = ("  <-- IN COLONNA (%s)" % marca) if marca else ""
+            righe.append('  [%s] %s: "%s"%s' % (NOMI[a["area"]], a["fonte"], a["titolo"], tag))
             url = a.get("url")
             if url and letti < MAX_LETTURE:
                 if url not in cache_incipit:

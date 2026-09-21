@@ -88,6 +88,7 @@ AGENZIE = ("ansa.it", "agi.it", "adnkronos.com", "italpress.com", "lapresse.it")
 # in cluster.py puo' raffinarla — ma cattura bene i segnali tipici.
 # ---------------------------------------------------------------------------
 import re as _re
+import unicodedata
 
 _PAROLE_ALLARME = {
     # emergenza / catastrofe
@@ -206,21 +207,67 @@ def coppia_divergente(sinistra, destra, k=6):
     )
 
 
+_STOP_TIT = {
+    "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "di", "del", "dei",
+    "della", "delle", "dello", "degli", "a", "al", "ai", "alla", "alle", "da",
+    "dal", "in", "nel", "nella", "con", "su", "sul", "per", "tra", "fra", "e",
+    "ed", "o", "che", "chi", "non", "si", "ha", "ho", "hai", "come", "piu",
+    "meno", "ma", "se", "sono", "dopo", "prima", "ancora", "anche", "cosi",
+}
+
+
+def _parole_tit(titolo):
+    """Parole-contenuto di un titolo, per misurare quanto due titoli si somigliano."""
+    t = unicodedata.normalize("NFKD", (titolo or "").lower())
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    t = _re.sub(r"[^a-z0-9 ]", " ", t)
+    return {w for w in t.split() if len(w) > 3 and w not in _STOP_TIT}
+
+
+def _rappresentativita(a, gruppo):
+    """Quanto il titolo di `a` somiglia agli ALTRI titoli del gruppo (Jaccard medio).
+    Alto = inquadratura tipica del centro; basso = outlier (la mosca bianca)."""
+    mie = _parole_tit(a.get("titolo", ""))
+    if not mie:
+        return 0.0
+    punteggi = []
+    for b in gruppo:
+        if b is a:
+            continue
+        sue = _parole_tit(b.get("titolo", ""))
+        if not sue:
+            continue
+        unione = mie | sue
+        punteggi.append(len(mie & sue) / len(unione) if unione else 0.0)
+    return sum(punteggi) / len(punteggi) if punteggi else 0.0
+
+
 def riferimento_centro(articoli):
     """Il titolo di riferimento in mezzo al duello.
 
-    Si preferisce un lancio d'agenzia, che è la versione più asciutta
-    disponibile. Se nessuna agenzia ha battuto la notizia si prende un titolo
-    di centro, ma va detto al lettore che non è un lancio: sul campo "agenzia"
-    il sito cambia l'etichetta della colonna centrale. Un editoriale di centro
-    non è un riferimento neutro e non va spacciato per tale.
+    Si preferisce un lancio d'agenzia (la versione più asciutta). Tra i
+    candidati NON si prende il più corto — la brevità premia gli outlier — ma il
+    più RAPPRESENTATIVO: quello la cui inquadratura somiglia di più agli altri
+    titoli del centro. Così la colonna «Centro» mostra il taglio che il centro,
+    in maggioranza, ha dato alla notizia, non l'eccezione capitata a essere
+    breve. La rappresentatività si misura su TUTTI i titoli di centro; poi, a
+    parità sostanziale, si mostra un'agenzia se c'è (più neutra). Un editoriale
+    di centro non è un riferimento neutro e non va spacciato per tale.
     """
     centrali = [a for a in articoli if a.get("area") == "C"]
     if not centrali:
         return None
+
+    if len(centrali) <= 2:                      # troppo pochi per un outlier: resta l'asciutto
+        agenzie = [a for a in centrali if a.get("dominio", "") in AGENZIE]
+        pool = agenzie or centrali
+        scelta = min(pool, key=lambda a: len(a.get("titolo", "")))
+        return dict(scelta, agenzia=bool(agenzie))
+
+    rappr = {id(a): _rappresentativita(a, centrali) for a in centrali}
     agenzie = [a for a in centrali if a.get("dominio", "") in AGENZIE]
     if agenzie:
-        scelta = min(agenzie, key=lambda a: len(a.get("titolo", "")))
+        scelta = max(agenzie, key=lambda a: (rappr[id(a)], -len(a.get("titolo", ""))))
         return dict(scelta, agenzia=True)
-    scelta = min(centrali, key=lambda a: len(a.get("titolo", "")))
+    scelta = max(centrali, key=lambda a: (rappr[id(a)], -len(a.get("titolo", ""))))
     return dict(scelta, agenzia=False)
