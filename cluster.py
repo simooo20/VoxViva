@@ -37,6 +37,7 @@ from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
 
 import re as _re
 import urllib.request
+import difflib
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
@@ -464,6 +465,36 @@ def chiama(client, prompt, schema, max_tokens=16000, tentativi=4, modello=None):
     raise ultimo
 
 
+def _titolo_copiato(titolo_neutro, titolo_articolo):
+    """Vero se titolo_neutro e' (quasi) la copia letterale del titolo di un
+    articolo - anche con un suffisso di testata attaccato in coda ("... - Il
+    Fatto Quotidiano"). Il divieto di copiare e' nel prompt, ma i modelli
+    ogni tanto non lo rispettano: questa e' la rete di sicurezza in Python."""
+    a = (titolo_neutro or "").strip().lower()
+    b = (titolo_articolo or "").strip().lower()
+    if not a or not b:
+        return False
+    if a == b or a.startswith(b) or b.startswith(a):
+        return True
+    return difflib.SequenceMatcher(None, a, b).ratio() > 0.85
+
+
+def _correggi_titolo_neutro(ev, contro_membri=None):
+    """Se titolo_neutro risulta copiato da uno dei titoli indicati (di solito
+    i membri attuali del gruppo, o quelli appena espulsi), lo sostituisce col
+    titolo del primo membro RIMASTO - stessa convenzione di fallback gia' in
+    uso altrove nel file per gli eventi singoli. Ritorna True se ha corretto."""
+    membri = ev.get("articoli") or []
+    if not membri:
+        return False
+    sospetti = contro_membri if contro_membri is not None else membri
+    tn = ev.get("titolo_neutro", "")
+    if any(_titolo_copiato(tn, a.get("titolo", "")) for a in sospetti):
+        ev["titolo_neutro"] = membri[0]["titolo"]
+        return True
+    return False
+
+
 def raggruppa(client, articoli, ore):
     # Non mandare TUTTO al modello in un colpo solo: con molte centinaia di
     # articoli la risposta supera il limite di token e viene tagliata a meta',
@@ -565,12 +596,15 @@ def raggruppa(client, articoli, ore):
                 membri.append(per_key[k])
                 usati.add(k)
         if membri:
-            eventi.append({
+            nuovo_ev = {
                 "titolo_neutro": (ev.get("titolo_neutro") or membri[0]["titolo"]).strip(),
                 "fatto_specifico": (ev.get("fatto_specifico") or "").strip(),
                 "tema": ev.get("tema", "altro"),
                 "articoli": membri,
-            })
+            }
+            # rete di sicurezza: il prompt vieta di ricopiare un titolo, ma capita.
+            _correggi_titolo_neutro(nuovo_ev)
+            eventi.append(nuovo_ev)
 
     persi = [per_key[k] for k in per_key if k not in usati]
     if persi:
@@ -624,6 +658,12 @@ def verifica(client, eventi):
             continue
         eventi[idx]["articoli"] = restano
         eventi[idx]["verificato"] = True
+        # il titolo_neutro l'ha scritto raggruppa() PRIMA di sapere chi sarebbe
+        # stato espulso: se era la copia di un titolo appena cacciato, resta
+        # orfano - il lettore leggerebbe in cima la fonte di un articolo che
+        # tre righe sotto non compare piu'. Lo si corregge sui membri rimasti.
+        if _correggi_titolo_neutro(eventi[idx], contro_membri=espulsi):
+            print("    gruppo %d: titolo_neutro era copiato da un titolo espulso, corretto" % n)
         espulsi_totali.extend(espulsi)
         tocchi += 1
         print("    gruppo %d: fuori %d titoli - %s"
