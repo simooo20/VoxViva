@@ -2,7 +2,7 @@
 #
 # Cosa fa: due volte al giorno (e ogni volta che lo lanci a mano) rigira la
 # pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce la
-# pagina, genera il CSV delle card social — e pubblica su GitHub Pages.
+# pagina — e pubblica su GitHub Pages. (Le card social: bottone a parte, social.yml.)
 
 name: Aggiorna VoxViva
 
@@ -61,7 +61,6 @@ jobs:
           python ingest.py --ore 24
           python cluster.py
           python render.py --max 15
-          python genera_social.py
 
       - name: Configura Pages
         uses: actions/configure-pages@v5

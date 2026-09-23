@@ -2,8 +2,8 @@
 #
 # Bottone manuale: scheda "Actions" -> "Genera card social" -> "Run workflow".
 # Prende le notizie del momento, sceglie i confronti piu' divergenti e scrive
-# il CSV per il Bulk Create di Canva. NON ripubblica il sito: ti lascia solo il
-# file da scaricare, in fondo alla pagina del run, sotto "Artifacts" (social-csv).
+# una pagina con le card pronte (Scarica PNG + Copia didascalia). NON ripubblica
+# il sito: il file e' in fondo alla pagina del run, sotto "Artifacts" (social-card).
 #
 # I due campi ti fanno scegliere quanto forti e quante card, senza toccare nulla.
 
@@ -15,7 +15,7 @@ on:
       soglia:
         description: "Quanto devono divergere i due lati (0-1). Piu' alto = meno card ma piu' forti"
         required: false
-        default: "0.65"
+        default: "0.5"
       max:
         description: "Numero massimo di card"
         required: false
@@ -39,7 +39,7 @@ jobs:
       - name: Installa le dipendenze
         run: pip install -r requirements.txt
 
-      - name: Genera il CSV
+      - name: Genera le card
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
@@ -55,9 +55,9 @@ jobs:
           python cluster.py
           python genera_social.py --soglia "$SOGLIA" --max "$MAXCARD"
 
-      - name: Consegna il CSV
+      - name: Consegna le card
         uses: actions/upload-artifact@v4
         with:
-          name: social-csv
-          path: web/social.csv
+          name: social-card
+          path: web/social.html
           if-no-files-found: warn
