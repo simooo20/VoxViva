@@ -199,16 +199,6 @@
       "tipo": "agenzia"
     },
     {
-      "name": "ANSA sport",
-      "etichetta": "ANSA",
-      "domain": "ansa.it",
-      "area": "C",
-      "rss": "https://www.ansa.it/sito/notizie/sport/sport_rss.xml",
-      "proprieta": "cooperativa di editori di giornali",
-      "stato": "ok",
-      "tipo": "agenzia"
-    },
-    {
       "name": "ANSA economia",
       "etichetta": "ANSA",
       "domain": "ansa.it",

@@ -112,7 +112,8 @@ MERCATO = re.compile(
 RUMORE = re.compile(
     r"("
     # --- calcio e risultati ---
-    r"\bserie a\b|\bserie b\b|champions league|europa league|conference league|"
+    r"\bserie a\b|\bserie b\b|\bserie c\b|champions league|europa league|conference league|"
+    r"nations league|coppa italia|\bcalciator[ei]\b|\bex azzurr|\bnazionale di calcio|"
     r"\bgol\b|doppietta|tripletta|autogol|calciomercato|moviola|\bvar\b|"
     r"capocannoniere|probabili formazioni|formazioni ufficiali|"
     # --- ciclismo ---
@@ -131,6 +132,24 @@ RUMORE = re.compile(
     r")",
     re.I,
 )
+
+# Sport dall'INDIRIZZO: quasi tutte le testate mettono lo sport in una sezione
+# (/sport/, /calcio/, "storie-di-sport"...). E' il filtro piu' affidabile: prende
+# anche i titoli che non contengono nessuna parola sportiva ("Italia mai nata e
+# il Belgio passa a Roma"). Lo sport NON si pubblica su VoxViva (decisione di
+# Simone): su un risultato non esiste una lettura di sinistra/centro/destra.
+URL_SPORT = re.compile(
+    r"(^|[/\-_.])(sport|sports|calcio|calciomercato|motori|formula-?1|f1|motogp|"
+    r"tennis|ciclismo|basket|volley|rugby|atletica|nuoto)([/\-_.]|$)",
+    re.I,
+)
+
+
+def e_sport(link):
+    try:
+        return bool(URL_SPORT.search(urlparse(link).path))
+    except Exception:
+        return False
 
 
 
@@ -362,7 +381,7 @@ def main():
                 scartati_mercato += 1
                 continue
 
-            if RUMORE.search(titolo):
+            if RUMORE.search(titolo) or e_sport(link):
                 scartati_rumore += 1
                 continue
 
@@ -404,7 +423,7 @@ def main():
                 return False
             if MERCATO.search(titolo):
                 return False
-            if RUMORE.search(titolo):
+            if RUMORE.search(titolo) or e_sport(link):
                 return False
             url_norm = pulisci_url(link)
             if url_norm in visti_url:

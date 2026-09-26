@@ -516,6 +516,9 @@ def main():
     # REGOLA DI PUBBLICAZIONE: si pubblica solo se ci sono tutte e tre le colonne
     # (sinistra, centro, destra). Se manca un lato, la notizia non esce.
     def completo(ev):
+        # lo sport non si pubblica (decisione di Simone): vedi TEMI_ESCLUSI in cluster.py
+        if ev.get("tema") == "sport":
+            return False
         return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
 
     completi = [ev for ev in eventi if completo(ev)]

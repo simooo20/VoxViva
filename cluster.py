@@ -30,6 +30,7 @@ import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
                    coppia_divergente, estremi, ordina_da_sinistra,
@@ -73,6 +74,40 @@ def leggi_incipit(url, max_chars=700):
             break
     return _re.sub(r"\s+", " ", testo).strip()[:max_chars]
 OUT = BASE / "data" / "events.json"
+
+ROMA = ZoneInfo("Europe/Rome")
+
+# FINESTRA TEMPORALE DEL CONFRONTO (regola di Simone, 26 set 2026): i titoli
+# messi a confronto devono essere stati scritti nelle STESSE ore. Se fra il
+# titolo di sinistra e quello di destra passano 7 ore, quasi sempre non sono la
+# stessa notizia ma due momenti diversi della vicenda (la proposta di accordo e,
+# ore dopo, il no di Trump). Ogni gruppo viene quindi ristretto alla finestra di
+# FINESTRA_ORE ore che copre meglio sinistra/centro/destra; chi sta fuori esce.
+# Si cambia senza toccare il codice con la variabile ILVAGLIO_FINESTRA_ORE.
+FINESTRA_ORE = float(os.environ.get("ILVAGLIO_FINESTRA_ORE", "5"))
+
+# Temi che NON si pubblicano (decisione di Simone): lo sport non ha una lettura
+# di sinistra/centro/destra. Il filtro in ingest.py toglie gran parte dello
+# sport dall'indirizzo e dalle parole; questo e' il secondo filtro, sul tema
+# che il modello assegna al gruppo, per quello che sfugge.
+TEMI_ESCLUSI = {"sport"}
+
+
+def _dt(iso):
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _ora_breve(iso):
+    """'26/9 09:14' in ora italiana: al modello serve per capire se due titoli
+    sono dello stesso momento della notizia o di due momenti diversi."""
+    d = _dt(iso)
+    if d is None:
+        return "?"
+    d = d.astimezone(ROMA)
+    return "%d/%d %s" % (d.day, d.month, d.strftime("%H:%M"))
 
 # Modalità economica: Haiku costa ~4-5 volte meno di Sonnet. Si puo' cambiare
 # senza toccare il codice, con la variabile ILVAGLIO_MODEL nel repo.
@@ -201,6 +236,7 @@ SCHEMA_RAGGRUPPA = {
                         "tema": {
                             "type": "string",
                             "enum": ["politica interna", "esteri", "economia", "cronaca", "giustizia", "societa", "immigrazione", "ambiente", "sport", "cultura", "altro"],
+                            "description": "'sport' per QUALSIASI notizia che riguarda partite, risultati, squadre, nazionali, atleti o ex atleti (anche se e' cronaca: un ex calciatore ricoverato e' 'sport'). Usa un altro tema solo se la notizia e' diventata politica (soldi pubblici, governo, leggi).",
                         },
                         "ids": {
                             "type": "array",
@@ -241,6 +277,11 @@ Non guardare le parole in comune: guarda di quale fatto si parla.
 - Un caso di cronaca (un omicidio, un incidente mortale) con l'indagine, le reazioni, i dettagli → un evento.
 
 **Regola pratica:** se Google News lo terrebbe in UN unico blocco di «notizie principali» con più testate sotto, tienilo in un gruppo solo anche tu. Solo un TEMA perenne e generico ("l'immigrazione", "la guerra" in astratto, senza un episodio del giorno) non è un evento.
+
+**STESSO MOMENTO DELLA NOTIZIA — regola dura.** Accanto a ogni titolo c'è data e ora di pubblicazione. I titoli di un gruppo devono raccontare la notizia allo STESSO STADIO: devono dire la stessa cosa sul punto a cui è arrivata la vicenda. Quando una vicenda fa un passo avanti, il passo prima e il passo dopo sono DUE notizie diverse, anche se i protagonisti sono gli stessi:
+- «L'Iran presenta una proposta di tregua» (mattina) e «Trump respinge la proposta dell'Iran» (sera) → DUE eventi. Chi legge il primo non sa ancora del no.
+- «Indagato il sindaco» e «Arrestato il sindaco»; «Il governo presenta il decreto» e «Il decreto approvato/bocciato»; «Scomparsa una ragazza» e «Ritrovato il corpo» → DUE eventi.
+Test: se il titolo A NON contiene ancora il fatto nuovo che è nel titolo B (e B è di diverse ore dopo), non stanno insieme. Titoli pubblicati a molte ore di distanza (più di 4-5) sono quasi sempre momenti diversi della vicenda: uniscili solo se dicono davvero la stessa cosa. Questo vale anche per la grande notizia del giorno: gli aspetti della STESSA fase stanno insieme, le fasi successive no.
 
 **Nel dubbio, UNISCI — poi si controlla.** Un secondo passaggio ricontrollerà ogni gruppo e caccerà i titoli che non c'entrano, quindi un gruppo un po' generoso è sicuro; un gruppo spaccato no. Se lo stesso fatto finisce in due gruppi separati, il confronto fra le testate di orientamento opposto si perde e non lo recupera più nessuno. Perciò, quando due titoli *potrebbero* essere lo stesso singolo fatto, mettili insieme. Resta fermo solo il divieto qui sopra: non unire MAI fatti davvero diversi (evento, luogo, giorno o protagonisti diversi).
 
@@ -297,6 +338,7 @@ Per ogni gruppo trovi il fatto/vicenda dichiarato e i titoli dentro. Per ogni ti
 
 Togli il titolo SOLO se parla di una notizia DAVVERO diversa:
 - un altro episodio, un altro giorno, un'altra vicenda (non un aspetto diverso della stessa notizia di oggi)
+- un MOMENTO DIVERSO della stessa vicenda: il titolo racconta la notizia prima (o dopo) il fatto nuovo che raccontano gli altri. Es. «L'Iran propone una tregua» in un gruppo dove gli altri dicono «Trump respinge la proposta» → va tolto: chi lo legge non sa ancora del no. Guarda l'ora fra parentesi: titoli di molte ore prima o dopo gli altri sono i primi sospettati.
 - una gara / competizione / città chiaramente diversa
 - un tema perenne e generico al posto della notizia del giorno
 
@@ -320,6 +362,10 @@ SCHEMA_ANALIZZA = {
                     "type": "object",
                     "properties": {
                         "evento": {"type": "integer", "description": "Il numero dell'evento come indicato nell'elenco."},
+                        "titolo": {
+                            "type": "string",
+                            "description": "La riga grande in cima al confronto: una sintesi neutra, con parole TUE, del fatto che raccontano i TRE titoli in colonna (non altri momenti della vicenda). Deve essere coerente con tutti e tre e DIVERSA da ognuno di loro, in particolare dal titolo di centro. Massimo 90 caratteri, nessun aggettivo valutativo.",
+                        },
                         "divergenza": {
                             "type": "string",
                             "enum": ["bassa", "media", "alta"],
@@ -334,7 +380,7 @@ SCHEMA_ANALIZZA = {
                             "description": "Due o tre frasi in italiano che spiegano la differenza concreta fra i titoli: quale parola cambia, cosa viene messo davanti, cosa viene taciuto, quale numero viene scelto. Descrittivo, non giudicante: si scrive cosa fanno i titoli, non che una testata è in malafede. Cita le parole tra virgolette.",
                         },
                     },
-                    "required": ["evento", "divergenza", "duello", "nota"],
+                    "required": ["evento", "titolo", "divergenza", "duello", "nota"],
                 },
             }
         },
@@ -564,15 +610,17 @@ def raggruppa(client, articoli, ore):
     # (1, 2, 3...) e lo ritraduciamo in id vero qui in Python. Cosi' ogni id
     # occupa ~1 token invece di ~5, sia nei titoli in ingresso sia negli "ids"
     # che il modello ci rimanda: e' il passo su Sonnet, quello che pesa di piu'.
-    # Tolta anche l'ora (HH:MM): per capire se due titoli sono lo stesso fatto
-    # del giorno il minuto non serve, e la finestra "{ore} ore" e' gia' nel prompt.
+    # L'ora e' TORNATA (26 set): senza, il modello univa la proposta di tregua
+    # del mattino col «no» di Trump della sera. Costa pochi token, ne vale la pena.
     per_key = {}
     righe = []
     for n, a in enumerate(articoli, 1):
         k = str(n)
         per_key[k] = a
-        # la testata serve al modello per capire il registro, la posizione politica NO
-        righe.append("%s [%s] %s" % (k, a["fonte"], a["titolo"]))
+        # la testata serve al modello per capire il registro, la posizione politica NO.
+        # L'ora serve: due titoli a 7 ore di distanza sono quasi sempre due
+        # momenti diversi della vicenda (proposta vs rifiuto), non la stessa notizia.
+        righe.append("%s (%s) [%s] %s" % (k, _ora_breve(a.get("pubblicato", "")), a["fonte"], a["titolo"]))
     prompt = PROMPT_RAGGRUPPA.format(ore=ore, titoli="\n".join(righe))
 
     dati, uso = chiama(client, prompt, SCHEMA_RAGGRUPPA, max_tokens=16000, modello=MODELLO_RAGGRUPPA)
@@ -636,7 +684,7 @@ def verifica(client, eventi):
         for j, a in enumerate(ev["articoli"], 1):
             k = "%d-%d" % (n, j)
             per_key[k] = a
-            righe.append('  %s [%s] "%s"' % (k, a["fonte"], a["titolo"]))
+            righe.append('  %s (%s) [%s] "%s"' % (k, _ora_breve(a.get("pubblicato", "")), a["fonte"], a["titolo"]))
         blocchi.append("\n".join(righe))
 
     dati, uso = chiama(client, PROMPT_VERIFICA.format(gruppi="\n\n".join(blocchi)), SCHEMA_VERIFICA)
@@ -680,6 +728,60 @@ def verifica(client, eventi):
         print("  gruppi corretti: %d, titoli rimessi da soli: %d" % (tocchi, len(espulsi_totali)))
     else:
         print("  nessun intruso trovato")
+    return eventi
+
+
+def _colonna_di(a):
+    area = a.get("area")
+    for chiave, _, aree in COLONNE:
+        if area in aree:
+            return chiave
+    return None
+
+
+def stringi_nel_tempo(eventi, finestra_ore=FINESTRA_ORE):
+    """Tiene in ogni gruppo solo i titoli scritti nelle STESSE ore.
+
+    Fra tutte le finestre di `finestra_ore` ore si sceglie quella che copre piu'
+    colonne (sinistra/centro/destra), poi con piu' testate, poi la piu' recente.
+    Chi sta fuori diventa un evento a se': meglio perdere un confronto che
+    mostrarne uno fra due momenti diversi della notizia. Tutto in Python, zero
+    token, e non si fida del modello: e' la garanzia dura sulla regola delle ore.
+    """
+    if finestra_ore <= 0:
+        return eventi
+    larghezza = finestra_ore * 3600
+    fuori_tot, toccati = [], 0
+    for ev in eventi:
+        arts = [a for a in ev["articoli"] if _dt(a.get("pubblicato", ""))]
+        if len(arts) < 2:
+            continue
+        arts.sort(key=lambda a: _dt(a["pubblicato"]))
+        ts = [_dt(a["pubblicato"]).timestamp() for a in arts]
+        if ts[-1] - ts[0] <= larghezza:
+            continue                                  # gia' tutto nelle stesse ore
+        migliore, punteggio = None, None
+        for i in range(len(arts)):
+            dentro = [a for a, t in zip(arts, ts) if ts[i] <= t <= ts[i] + larghezza]
+            colonne = {_colonna_di(a) for a in dentro} - {None}
+            testate = {a["fonte"] for a in dentro if a.get("area") in AREE}
+            p = (len(colonne), len(testate), len(dentro), ts[i])
+            if punteggio is None or p > punteggio:
+                migliore, punteggio = dentro, p
+        tenuti = {id(a) for a in migliore}
+        fuori = [a for a in ev["articoli"] if id(a) not in tenuti]
+        if not fuori:
+            continue
+        ev["articoli"] = [a for a in ev["articoli"] if id(a) in tenuti]
+        ev["stretto_nel_tempo"] = True
+        _correggi_titolo_neutro(ev, contro_membri=fuori)
+        fuori_tot.extend(fuori)
+        toccati += 1
+    for a in fuori_tot:
+        eventi.append({"titolo_neutro": a["titolo"], "fatto_specifico": a["titolo"],
+                       "tema": "altro", "articoli": [a], "fuori_finestra": True})
+    print("  finestra %.0fh: %d gruppi ristretti, %d titoli fuori orario rimessi da soli"
+          % (finestra_ore, toccati, len(fuori_tot)))
     return eventi
 
 
@@ -742,7 +844,8 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
     # analizza gli eventi principali (sempre, sono la cima del sito) piu' quelli
     # con estremi distanti. Cosi' ogni evento in vetta ha la sua nota.
     candidati = [(i, ev) for i, ev in enumerate(eventi)
-                 if ev.get("principale") or ev["ampiezza"] >= ampiezza_minima][:quanti]
+                 if ev.get("tema") not in TEMI_ESCLUSI
+                 and (ev.get("principale") or ev["ampiezza"] >= ampiezza_minima)][:quanti]
     if not candidati:
         print("  passo 2 saltato: nessun evento con estremi abbastanza distanti")
         return
@@ -800,6 +903,10 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
         n = voce.get("evento", 0)
         if 1 <= n <= len(candidati):
             idx = candidati[n - 1][0]
+            nuovo = (voce.get("titolo") or "").strip()
+            if nuovo and not any(_titolo_copiato(nuovo, a.get("titolo", ""))
+                                 for a in eventi[idx]["articoli"]):
+                eventi[idx]["titolo_neutro"] = nuovo
             eventi[idx]["divergenza"] = voce.get("divergenza", "media")
             eventi[idx]["duello"] = voce.get("duello", "").strip()
             eventi[idx]["nota"] = voce.get("nota", "").strip()
@@ -844,6 +951,10 @@ def main():
             print("  verifica saltata: %s" % exc)
         except Exception as exc:
             print("  verifica saltata per un errore momentaneo: %s" % str(exc)[:150])
+    eventi = stringi_nel_tempo(eventi)
+    esclusi = sum(1 for e in eventi if e.get("tema") in TEMI_ESCLUSI and len(e["articoli"]) >= 2)
+    if esclusi:
+        print("  gruppi di sport scartati (non si pubblicano): %d" % esclusi)
     eventi = arricchisci(eventi)
     if not args.no_analisi:
         try:
