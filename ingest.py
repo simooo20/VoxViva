@@ -487,12 +487,25 @@ def main():
     articoli.sort(key=lambda a: a["pubblicato"], reverse=True)
 
     conteggi = {x: sum(1 for a in articoli if a["area"] == x) for x in AREE}
+
+    # I raggruppamenti di Google News (notizie principali + sezioni): sono
+    # l'ossatura del raggruppamento in cluster.py. Lo sport si toglie qui.
+    storie_google = []
+    try:
+        import gnews
+        storie_google = [st for st in gnews.storie(taglio)
+                         if not RUMORE.search(st["titolo"])]
+    except Exception as exc:
+        print("  Google News non disponibile: %s (si usa il raggruppamento completo)" % str(exc)[:80])
+    print("Storie Google News: %d" % len(storie_google))
+
     out = {
         "generato": datetime.now(timezone.utc).isoformat(),
         "finestra_ore": args.ore,
         "totale": len(articoli),
         "per_area": conteggi,
         "report_fonti": report,
+        "storie_google": storie_google,
         "articoli": articoli,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)

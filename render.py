@@ -729,6 +729,7 @@ def main():
         "pubblicati": len(principali) + len(altri),
         "in_prima_pagina": len(principali),
         "scartati_lato_mancante": scartati_incompleti,
+        "raggruppamento": d.get("raggruppamento"),   # "google" o "completo" (riserva)
     }
     (OUT.parent / "stato.json").write_text(
         json.dumps(stato, ensure_ascii=False, indent=2), encoding="utf-8")

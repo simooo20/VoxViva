@@ -212,6 +212,7 @@ class Budget:
 
 
 BUDGET = None  # impostato in main(), None = nessun tetto (es. test)
+MODO = {"raggruppamento": None}  # "google" o "completo": finisce in events.json
 
 
 SCHEMA_RAGGRUPPA = {
@@ -663,6 +664,222 @@ def raggruppa(client, articoli, ore):
     return eventi
 
 
+# --- RAGGRUPPAMENTO DA GOOGLE NEWS ----------------------------------------
+# Dal 26/9/2026 il raggruppamento parte dalle storie di Google News (vedi
+# gnews.py): Google decide QUALI sono le notizie e chi le racconta (il nucleo);
+# il modello deve solo dire, per ogni nostro titolo, se racconta una di quelle
+# notizie. E' un lavoro molto piu' facile e preciso che trovare da zero le
+# coppie fra 850 titoli. Se le storie mancano (Google non risponde) o la
+# chiamata fallisce, si torna a raggruppa() come prima.
+MIN_STORIE = 10
+
+SCHEMA_ABBINA = {
+    "name": "registra_abbinamenti",
+    "description": "Registra, per ogni notizia di Google, quali titoli delle nostre testate raccontano quello stesso fatto.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "notizie": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "notizia": {"type": "integer", "description": "Il numero della notizia (N1, N2... -> 1, 2...)."},
+                        "tema": {
+                            "type": "string",
+                            "enum": ["politica interna", "esteri", "economia", "cronaca", "giustizia", "societa", "immigrazione", "ambiente", "sport", "cultura", "altro"],
+                            "description": "'sport' per QUALSIASI notizia su partite, risultati, squadre, nazionali, atleti o ex atleti.",
+                        },
+                        "ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "I numeri dei nostri titoli che raccontano LO STESSO fatto allo STESSO stadio. Lista vuota se nessuno.",
+                        },
+                    },
+                    "required": ["notizia", "tema", "ids"],
+                },
+            }
+        },
+        "required": ["notizie"],
+    },
+}
+
+PROMPT_ABBINA = """Qui sotto trovi due elenchi.
+
+1) NOTIZIE: le notizie del giorno come le ha raggruppate Google News. Per ognuna c'è il titolo di testa (con l'ora) e le testate che Google ha messo nello stesso gruppo. Queste notizie sono già decise: NON devi inventarne altre né unirle fra loro.
+
+2) TITOLI: i titoli delle ultime {ore} ore dalle nostre testate, con data e ora.
+
+Il tuo compito: per ogni notizia, indica quali TITOLI raccontano ESATTAMENTE quel fatto. Il sito mette a confronto come testate di orientamento diverso titolano la stessa notizia, quindi l'abbinamento deve essere preciso:
+
+- **Stesso fatto.** Il titolo parla dello stesso episodio, non dello stesso argomento. «Garofano sentito in procura» e «La difesa di Sempio attende le nuove prove» sono entrambi su Garlasco ma sono fatti diversi. «Eni mette un tetto ai prezzi» e «I viaggi in Africa di Meloni con Descalzi» sono fatti diversi.
+- **Stesso stadio della vicenda.** Se la notizia è «Trump respinge la proposta dell'Iran», un titolo che racconta ancora solo «l'Iran propone una tregua» (senza il no) NON va abbinato: è il momento prima. Guarda l'ora: titoli di molte ore prima della notizia sono i primi sospettati.
+- **Parole diverse vanno bene.** Lo stesso fatto titolato con parole opposte o cariche («Trump gela l'Iran» / «no di Trump alla tregua») VA abbinato: è proprio il confronto che serve. Anche un commento o un retroscena su quel fatto va bene.
+- Ogni titolo va al massimo in UNA notizia. La maggior parte dei titoli non corrisponde a nessuna notizia: è normale, lasciali fuori.
+
+Riporta una voce per OGNI notizia (anche con ids vuoto), con il tema.
+
+NOTIZIE:
+
+{notizie}
+
+TITOLI:
+
+{titoli}
+
+Chiama registra_abbinamenti."""
+
+
+def _pool_bilanciato(articoli, massimo):
+    """Stessa selezione di raggruppa(): un terzo per colonna, estremi per primi."""
+    if len(articoli) <= massimo:
+        return articoli
+
+    def _recenti(pool, estremi):
+        est = sorted((a for a in pool if a.get("area") in estremi),
+                     key=lambda a: a.get("pubblicato", ""), reverse=True)
+        mod = sorted((a for a in pool if a.get("area") not in estremi),
+                     key=lambda a: a.get("pubblicato", ""), reverse=True)
+        return est + mod
+
+    colonne = [
+        _recenti([a for a in articoli if a.get("area") in ("SR", "CS")], {"SR"}),
+        _recenti([a for a in articoli if a.get("area") == "C"], set()),
+        _recenti([a for a in articoli if a.get("area") in ("CD", "DR")], {"DR"}),
+    ]
+    quote, assegnati = [0, 0, 0], 0
+    while assegnati < massimo and any(quote[i] < len(colonne[i]) for i in range(3)):
+        for i in range(3):
+            if assegnati < massimo and quote[i] < len(colonne[i]):
+                quote[i] += 1
+                assegnati += 1
+    tenuti = []
+    for c, q in zip(colonne, quote):
+        tenuti += c[:q]
+    return tenuti
+
+
+def raggruppa_da_google(client, articoli, storie, ore):
+    """Eventi costruiti sulle storie di Google. Ritorna None se non si puo'."""
+    import hashlib
+    import gnews
+    fonti = json.loads((BASE / "sources.json").read_text(encoding="utf-8"))["sources"]
+    testate = gnews.Testate(fonti)
+
+    # le storie che contano: non sport, con almeno una testata nostra nel nucleo
+    # o comunque in agenda (le principali). Ordine: principali, poi sezioni.
+    ordine_sez = {"principali": 0, "italia": 1, "politica": 2, "mondo": 3, "economia": 4}
+    storie = sorted(storie, key=lambda s: (ordine_sez.get(s["sezione"], 9), s["ordine"]))
+
+    # la stessa notizia compare spesso sia nelle principali sia in una sezione,
+    # con un titolo di testa diverso: se due storie condividono un pezzo del
+    # nucleo (stessa testata, stesso titolo) sono la stessa, e si tiene la prima
+    # (quella delle principali), aggiungendo al nucleo i pezzi nuovi.
+    unite, firma_di = [], {}
+    for st in storie:
+        firme = {(n.get("fonte_google", ""), " ".join(gnews._norm_titolo(n["titolo"]))[:60])
+                 for n in st["nucleo"]}
+        gia = next((firma_di[f] for f in firme if f in firma_di), None)
+        if gia is None:
+            gia = dict(st, nucleo=list(st["nucleo"]))
+            unite.append(gia)
+        else:
+            noti = {(n.get("fonte_google", ""), n["titolo"]) for n in gia["nucleo"]}
+            gia["nucleo"] += [n for n in st["nucleo"] if (n.get("fonte_google", ""), n["titolo"]) not in noti]
+        for f in firme:
+            firma_di.setdefault(f, gia)
+    if len(unite) < len(storie):
+        print("  storie Google unite perche' uguali fra sezioni: %d -> %d" % (len(storie), len(unite)))
+    storie = unite
+
+    reali = [a for a in articoli if a.get("area") in AREE]
+    per_fonte = {}
+    for a in reali:
+        per_fonte.setdefault(a["fonte"], []).append(a)
+
+    # 1) il nucleo: i pezzi del gruppo di Google che abbiamo anche noi (stesso
+    #    pezzo, stessa testata) entrano subito, con la loro ora vera.
+    presi = set()
+    eventi = []
+    for st in storie:
+        membri = []
+        for j, n in enumerate(st["nucleo"]):
+            chi = testate.riconosci(n.get("fonte_google", ""), n.get("url_fonte", ""))
+            if not chi:
+                continue
+            nome, area = chi
+            trovato = next((a for a in per_fonte.get(nome, [])
+                            if id(a) not in presi and gnews.stesso_titolo(a["titolo"], n["titolo"])), None)
+            if trovato is None and j == 0 and n.get("link"):
+                # la voce di testa di Google: ora esatta nota (pubDate), la
+                # teniamo anche se il nostro feed non l'aveva (link Google)
+                trovato = {
+                    "id": hashlib.sha1(n["link"].encode()).hexdigest()[:10],
+                    "titolo": n["titolo"], "url": n["link"],
+                    "pubblicato": st["pubblicato"], "fonte": nome,
+                    "feed": nome + " (google news, nucleo)",
+                    "dominio": gnews.dominio(n.get("url_fonte", "")),
+                    "area": area, "primaria": False, "ordine_feed": 0, "immagine": None,
+                }
+            if trovato is not None:
+                presi.add(id(trovato))
+                membri.append(trovato)
+        eventi.append({
+            "titolo_neutro": st["titolo"],
+            "fatto_specifico": st["titolo"],
+            "tema": "altro",
+            "articoli": membri,
+            "google": {"sezione": st["sezione"], "ordine": st["ordine"],
+                       "nucleo": [n.get("fonte_google", "") for n in st["nucleo"]]},
+            "ordine_google": st["ordine"] if st["sezione"] == "principali" else None,
+        })
+    nel_nucleo = sum(len(e["articoli"]) for e in eventi)
+
+    # 2) il modello abbina gli altri nostri titoli alle storie
+    liberi = _pool_bilanciato([a for a in reali if id(a) not in presi], 850)
+    per_key, righe_t = {}, []
+    for n, a in enumerate(liberi, 1):
+        per_key[str(n)] = a
+        righe_t.append("%d (%s) [%s] %s" % (n, _ora_breve(a.get("pubblicato", "")), a["fonte"], a["titolo"]))
+    righe_n = []
+    for n, (st, ev) in enumerate(zip(storie, eventi), 1):
+        altri = "; ".join("%s: %s" % (x.get("fonte_google", ""), x["titolo"][:90]) for x in st["nucleo"][1:5])
+        righe_n.append("N%d (%s) %s%s" % (n, _ora_breve(st["pubblicato"]), st["titolo"],
+                                          ("\n     anche: " + altri) if altri else ""))
+    prompt = PROMPT_ABBINA.format(ore=ore, notizie="\n".join(righe_n), titoli="\n".join(righe_t))
+    dati, uso = chiama(client, prompt, SCHEMA_ABBINA, max_tokens=16000, modello=MODELLO_RAGGRUPPA)
+    print("  passo 1 abbinamento a Google (%s): %d token in, %d out"
+          % (MODELLO_RAGGRUPPA, uso.input_tokens, uso.output_tokens))
+
+    usati, aggiunti = set(), 0
+    for voce in dati.get("notizie", []):
+        if not isinstance(voce, dict):
+            continue
+        n = voce.get("notizia", 0)
+        if not isinstance(n, int) or not (1 <= n <= len(eventi)):
+            continue
+        ev = eventi[n - 1]
+        ev["tema"] = voce.get("tema", "altro")
+        for k in voce.get("ids") or []:
+            k = str(k)
+            if k in per_key and k not in usati:
+                usati.add(k)
+                ev["articoli"].append(per_key[k])
+                aggiunti += 1
+
+    eventi = [e for e in eventi if e["articoli"]]
+    for e in eventi:
+        _correggi_titolo_neutro(e)
+    # i titoli non abbinati restano eventi singoli (non si pubblicano)
+    for k, a in per_key.items():
+        if k not in usati:
+            eventi.append({"titolo_neutro": a["titolo"], "fatto_specifico": a["titolo"],
+                           "tema": "altro", "articoli": [a]})
+    print("  storie Google: %d | titoli dal nucleo: %d | abbinati dal modello: %d"
+          % (len(storie), nel_nucleo, aggiunti))
+    return eventi
+
+
 def verifica(client, eventi):
     """Passo 1.5: rilegge i gruppi e caccia i titoli che non c'entrano.
 
@@ -809,10 +1026,15 @@ def arricchisci(eventi):
         primari = [a for a in ev["articoli"] if a.get("primaria")]
         reali = [a for a in ev["articoli"] if a.get("area") in AREE]
         ev["principale"] = bool(primari) and len(reali) >= 1 and len(ev["articoli"]) >= 2
+        if ev.get("ordine_google") is not None:
+            # storia delle notizie principali di Google: e' in agenda per definizione
+            ev["principale"] = len(reali) >= 2
         # ordine dell'agenda: comanda l'aggregatore (Google News). Gli eventi in
         # topnews d'agenzia ma non in GN vengono dopo (offset 100).
         agg = [a for a in primari if a.get("area") == AGGREGATORE]
-        if agg:
+        if ev.get("ordine_google") is not None:
+            ev["ordine_agenzia"] = ev["ordine_google"]
+        elif agg:
             ev["ordine_agenzia"] = min(a.get("ordine_feed", 999) for a in agg)
         else:
             ev["ordine_agenzia"] = 100 + min((a.get("ordine_feed", 999) for a in primari), default=899)
@@ -843,9 +1065,15 @@ def arricchisci(eventi):
 def analizza(client, eventi, quanti, ampiezza_minima=2):
     # analizza gli eventi principali (sempre, sono la cima del sito) piu' quelli
     # con estremi distanti. Cosi' ogni evento in vetta ha la sua nota.
+    # prima quelli che verranno PUBBLICATI (tre colonne piene): sono quelli
+    # che hanno bisogno del titolo grande riscritto e della nota.
+    def _pieno(ev):
+        return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
     candidati = [(i, ev) for i, ev in enumerate(eventi)
                  if ev.get("tema") not in TEMI_ESCLUSI
-                 and (ev.get("principale") or ev["ampiezza"] >= ampiezza_minima)][:quanti]
+                 and (ev.get("principale") or ev["ampiezza"] >= ampiezza_minima)]
+    candidati.sort(key=lambda x: not _pieno(x[1]))
+    candidati = candidati[:quanti]
     if not candidati:
         print("  passo 2 saltato: nessun evento con estremi abbastanza distanti")
         return
@@ -917,7 +1145,7 @@ def main():
     ap.add_argument("--no-verifica", action="store_true",
                     help="salta il controllo che caccia gli intrusi dai gruppi (sconsigliato)")
     ap.add_argument("--no-analisi", action="store_true", help="salta il passo 2")
-    ap.add_argument("--analizza", type=int, default=22, help="quanti eventi analizzare (serve la divergenza per ordinarli)")
+    ap.add_argument("--analizza", type=int, default=30, help="quanti eventi analizzare (serve la divergenza per ordinarli)")
     args = ap.parse_args()
 
     if not IN.exists():
@@ -939,8 +1167,24 @@ def main():
                      % (BUDGET.totale, BUDGET.tetto))
         print("Budget di oggi: spesi %.3f USD, tetto %.2f USD." % (BUDGET.totale, BUDGET.tetto))
 
+    storie = dati.get("storie_google") or []
+    eventi = None
+    if len(storie) >= MIN_STORIE:
+        try:
+            eventi = raggruppa_da_google(client, articoli, storie, dati.get("finestra_ore", 24))
+            MODO["raggruppamento"] = "google"
+        except BudgetEsaurito as exc:
+            sys.exit("Raggruppamento fermato dal tetto di spesa (%s). "
+                     "Salto il giro; resta online l'ultima versione pubblicata." % exc)
+        except Exception as exc:
+            print("  raggruppamento da Google fallito (%s): uso quello completo" % str(exc)[:150])
+            eventi = None
+    else:
+        print("  storie Google insufficienti (%d): uso il raggruppamento completo" % len(storie))
     try:
-        eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))
+        if eventi is None:
+            eventi = raggruppa(client, articoli, dati.get("finestra_ore", 24))
+            MODO["raggruppamento"] = "completo"
     except BudgetEsaurito as exc:
         sys.exit("Raggruppamento fermato dal tetto di spesa (%s). "
                  "Salto il giro; resta online l'ultima versione pubblicata." % exc)
@@ -974,6 +1218,7 @@ def main():
         "finestra_ore": dati.get("finestra_ore", 24),
         "modello": MODELLO,
         "modello_raggruppa": MODELLO_RAGGRUPPA,
+        "raggruppamento": MODO["raggruppamento"],
         "totale_articoli": len(articoli),
         "per_area": dati.get("per_area", {}),
         "testate_attive": sorted({a["fonte"] for a in articoli}),
