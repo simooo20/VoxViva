@@ -335,11 +335,11 @@
     {
       "name": "La Stampa",
       "domain": "lastampa.it",
-      "area": "C",
+      "area": "CS",
       "rss": "https://www.lastampa.it/rss/copertina.xml",
       "proprieta": "Gruppo SAE dal 2026, prima GEDI/Exor",
       "stato": "bloccato_da_datacenter",
-      "nota": "Simone la classifica imparziale (18/08/2026). Questo RISOLVE l'etichetta piu' contesa: l'avevamo forzata a centro-destra, ora sta al centro. Coerente col fatto che fino al 2026 era GEDI come Repubblica. Proprieta': gruppo SAE dal 2026. Wikipedia: progressista / centro. Tenuta a C (centro); lieve lean progressista."
+      "nota": "Simone la classifica imparziale (18/08/2026). Questo RISOLVE l'etichetta piu' contesa: l'avevamo forzata a centro-destra, ora sta al centro. Coerente col fatto che fino al 2026 era GEDI come Repubblica. Proprieta': gruppo SAE dal 2026. Wikipedia: progressista / centro. Tenuta a C (centro); lieve lean progressista. 28/9/2026: spostata da C a CS su richiesta di Simone (centro solo asciutto). Fonti: Media Bias/Fact Check la valuta Left-Center; Digital News Report Italia 2025 indica come trasversali solo ANSA e Corriere."
     },
     {
       "name": "TGCOM24",
