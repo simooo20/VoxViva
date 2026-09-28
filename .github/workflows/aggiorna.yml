@@ -13,6 +13,11 @@ on:
     - cron: "0 6,18 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
+    inputs:
+      veloce:
+        description: "Veloce: chiamate dirette invece della coda batch (costa il doppio, finisce in pochi minuti)"
+        type: boolean
+        default: false
 
 # permessi minimi per pubblicare su Pages
 permissions:
@@ -53,7 +58,7 @@ jobs:
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
           ILVAGLIO_MODEL_RAGGRUPPA: ${{ vars.ILVAGLIO_MODEL_RAGGRUPPA || 'claude-haiku-4-5' }}
           # Batch API: 50% di sconto. 1 = acceso, 0 = chiamate dirette (piu' veloci)
-          ILVAGLIO_BATCH: ${{ vars.ILVAGLIO_BATCH || '1' }}
+          ILVAGLIO_BATCH: ${{ inputs.veloce && '0' || vars.ILVAGLIO_BATCH || '1' }}
           ILVAGLIO_INTENSITA_ALLARME: ${{ vars.ILVAGLIO_INTENSITA_ALLARME || '1.6' }}
           ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
           ILVAGLIO_TETTO_USD: ${{ vars.ILVAGLIO_TETTO_USD || '0' }}
