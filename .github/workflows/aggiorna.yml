@@ -7,10 +7,15 @@
 name: Aggiorna VoxViva
 
 on:
-  # DUE giri al giorno: 06:00 e 18:00 UTC = 08:00 e 20:00 ora italiana d'estate.
-  # Per cambiare: "0 6 * * *" = 1 giro | "0 6,12,18 * * *" = 3 giri.
+  # DUE giri al giorno, ~07:40 e ~19:40 ora italiana d'estate (05:40 e 17:40 UTC).
+  # 28/9: il giro delle 18:00 UTC in punto non e' partito e quello delle 06:00
+  # e' partito con 7 ore di ritardo: GitHub rimanda o salta i cron all'ora
+  # esatta quando e' sovraccarico. Minuti "strani" (:40) = molti meno ritardi.
+  # RISERVA: alle :10 dell'ora dopo parte un secondo cron che si ferma subito
+  # (costo zero) se il sito e' gia' stato aggiornato nelle ultime 4 ore.
   schedule:
-    - cron: "0 6,18 * * *"
+    - cron: "40 5,17 * * *"
+    - cron: "10 7,19 * * *"
   # bottone "Run workflow" nella scheda Actions, per lanciarlo quando vuoi
   workflow_dispatch:
     inputs:
@@ -40,18 +45,42 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
+      - name: Serve un giro? (la riserva salta se il sito e' fresco)
+        id: serve
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, urllib.request, time
+          from datetime import datetime, timezone
+          evento = "${{ github.event_name }}"
+          cron = "${{ github.event.schedule }}"
+          salta = False
+          if evento == "schedule" and cron.startswith("10 "):
+              try:
+                  url = "https://voxviva.xyz/stato.json?v=%d" % int(time.time())
+                  d = json.load(urllib.request.urlopen(url, timeout=15))
+                  eta = datetime.now(timezone.utc) - datetime.fromisoformat(d["generato"].replace("Z", "+00:00"))
+                  salta = eta.total_seconds() < 4 * 3600
+              except Exception:
+                  salta = False
+          print("salta=%s" % ("si" if salta else "no"))
+          PY
+
       - name: Scarica il codice
+        if: steps.serve.outputs.salta != 'si'
         uses: actions/checkout@v5
 
       - name: Prepara Python
+        if: steps.serve.outputs.salta != 'si'
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Installa le dipendenze
+        if: steps.serve.outputs.salta != 'si'
         run: pip install -r requirements.txt
 
       - name: Rigenera la pagina
+        if: steps.serve.outputs.salta != 'si'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # manopole opzionali: si regolano da Settings > Variables, senza toccare il codice
@@ -74,7 +103,7 @@ jobs:
       # aggiorna la segnalazione "Controllo qualita' VoxViva" su GitHub: arriva
       # per email. Non blocca mai la pubblicazione.
       - name: Segnala problemi di qualita'
-        if: always()
+        if: always() && steps.serve.outputs.salta != 'si'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,13 +125,16 @@ jobs:
           fi
 
       - name: Configura Pages
+        if: steps.serve.outputs.salta != 'si'
         uses: actions/configure-pages@v5
 
       - name: Carica il sito
+        if: steps.serve.outputs.salta != 'si'
         uses: actions/upload-pages-artifact@v5
         with:
           path: web
 
       - name: Pubblica su Pages
+        if: steps.serve.outputs.salta != 'si'
         id: deploy
         uses: actions/deploy-pages@v5
