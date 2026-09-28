@@ -1084,7 +1084,7 @@ def arricchisci(eventi):
 
 SCHEMA_TRIO = {
     "name": "registra_controllo",
-    "description": "Per ogni confronto, i titoli che NON raccontano lo stesso fatto degli altri.",
+    "description": "Per ogni confronto, i titoli che NON raccontano lo stesso fatto.",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -1094,11 +1094,12 @@ SCHEMA_TRIO = {
                     "type": "object",
                     "properties": {
                         "confronto": {"type": "integer"},
+                        "fatto": {"type": "string", "description": "In una riga, il fatto comune che raccontano i titoli giusti."},
                         "fuori": {"type": "array", "items": {"type": "string"},
-                                  "description": "Le colonne (sinistra/centro/destra) il cui titolo racconta un ALTRO fatto. Vuota se i tre sono lo stesso fatto."},
+                                  "description": "Le sigle (es. 3-2) dei titoli che raccontano un ALTRO fatto. Vuota se sono tutti lo stesso fatto."},
                         "motivo": {"type": "string"},
                     },
-                    "required": ["confronto", "fuori", "motivo"],
+                    "required": ["confronto", "fatto", "fuori", "motivo"],
                 },
             }
         },
@@ -1106,11 +1107,12 @@ SCHEMA_TRIO = {
     },
 }
 
-PROMPT_TRIO = """Questi sono i confronti che stanno per essere pubblicati: per ognuno, i TRE titoli che il lettore vedra' affiancati (sinistra, centro, destra). Il sito afferma che raccontano LA STESSA NOTIZIA. Controlla che sia vero.
+PROMPT_TRIO = """Questi sono i confronti che stanno per essere pubblicati. Per ognuno trovi TUTTI i titoli che il lettore vedra' (quelli marcati IN PAGINA sono i tre affiancati, gli altri compaiono come «Anche:»). Il sito afferma che raccontano TUTTI LA STESSA NOTIZIA. Controlla titolo per titolo che sia vero.
 
-Per ogni confronto indica in "fuori" la colonna il cui titolo racconta un FATTO DIVERSO dagli altri due, anche se collegato. Esempi di fatto diverso:
+Per ogni confronto scrivi il fatto comune e indica in "fuori" le sigle dei titoli che raccontano un FATTO DIVERSO, anche se collegato. Esempi di fatto diverso:
 - «L'Idf elimina il terrorista che rapi' Noa Argamani» e «Olmert: Netanyahu sapeva del 7 ottobre» -> stessa vicenda di fondo, fatti DIVERSI: fuori.
 - «Garofano sentito in procura» e «La difesa di Sempio attende le prove» -> fatti diversi.
+- «Eni mette un tetto ai prezzi» e «I viaggi in Africa di Meloni con Descalzi» -> fatti diversi.
 - «L'Iran propone una tregua» e «Trump respinge la proposta» -> momenti diversi: fuori quello che non contiene ancora il fatto nuovo.
 
 NON e' fuori un titolo che racconta lo stesso fatto con parole diverse, cariche, di parte, con dettagli in piu' (origine, colpe, bersagli politici) o come commento: quella e' la differenza che il sito vuole mostrare.
@@ -1121,59 +1123,62 @@ Chiama registra_controllo con un controllo per ogni confronto."""
 
 
 def controlla_trio(client, eventi, giri=2):
-    """Controllo finale sui tre titoli che vanno DAVVERO in pagina (28/9, caso
-    Israele: Fanpage su Olmert-Netanyahu accanto all'uccisione del rapitore di
-    Noa). Il titolo di una colonna che racconta un altro fatto viene tolto dal
-    gruppo: al giro dopo la colonna mostra il titolo successivo, oppure resta
-    vuota e il confronto non si pubblica."""
+    """Controllo finale su TUTTI i titoli dei confronti che vanno in pagina
+    (28/9, caso Israele: Fanpage su Olmert-Netanyahu accanto all'uccisione del
+    rapitore di Noa; Simone: «l'attenzione deve essere su tutti gli
+    articoli»). Ogni titolo che racconta un altro fatto esce dal gruppo: la
+    colonna passa al titolo successivo, o resta vuota e il confronto non esce.
+    Il secondo giro ricontrolla i confronti cambiati."""
     def _pieno(ev):
         return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
+    da_controllare = None
     for giro in range(1, giri + 1):
-        cand = [ev for ev in eventi if _pieno(ev) and ev.get("tema") not in TEMI_ESCLUSI]
+        cand = [ev for ev in eventi if _pieno(ev) and ev.get("tema") not in TEMI_ESCLUSI
+                and (da_controllare is None or id(ev) in da_controllare)]
         if not cand:
             return eventi
-        trii, blocchi = [], []
+        per_key, blocchi = {}, []
         for n, ev in enumerate(cand, 1):
             sx, dx = coppia_divergente(ev["per_colonna"].get("sinistra", []),
                                        ev["per_colonna"].get("destra", []))
-            rif = ev.get("riferimento")
-            trio = {"sinistra": sx, "centro": rif, "destra": dx}
-            trii.append(trio)
+            in_pagina = {id(x): col for x, col in ((sx, "sinistra"), (ev.get("riferimento"), "centro"), (dx, "destra")) if x}
             righe = ["Confronto %d" % n]
-            for col in ("sinistra", "centro", "destra"):
-                a = trio[col]
-                if a:
-                    righe.append('  %s (%s, %s): "%s"' % (col, a["fonte"], _ora_breve(a.get("pubblicato", "")), a["titolo"]))
+            for k, a in enumerate(ordina_da_sinistra([x for x in ev["articoli"] if x.get("area") in AREE]), 1):
+                sigla = "%d-%d" % (n, k)
+                per_key[sigla] = (ev, a)
+                marca = next((c for x, c in in_pagina.items() if x == id(a) or
+                              (c == "centro" and ev.get("riferimento", {}).get("id") == a.get("id"))), None)
+                righe.append('  %s [%s, %s]%s "%s"' % (sigla, a["fonte"], _ora_breve(a.get("pubblicato", "")),
+                                                      " IN PAGINA (%s)" % marca if marca else "", a["titolo"]))
             blocchi.append("\n".join(righe))
         try:
             dati, uso = chiama(client, PROMPT_TRIO.format(confronti="\n\n".join(blocchi)), SCHEMA_TRIO)
         except BudgetEsaurito:
             raise
         except Exception as exc:
-            print("  controllo dei tre titoli saltato: %s" % str(exc)[:120])
+            print("  controllo finale dei titoli saltato: %s" % str(exc)[:120])
             return eventi
-        tolti = 0
+        tolti, cambiati = 0, set()
         for voce in dati.get("controlli", []):
-            n = voce.get("confronto", 0)
-            if not isinstance(n, int) or not (1 <= n <= len(cand)):
-                continue
-            ev, trio = cand[n - 1], trii[n - 1]
-            for col in voce.get("fuori") or []:
-                a = trio.get(str(col).strip().lower())
-                if a is None:
+            for sigla in voce.get("fuori") or []:
+                ev_a = per_key.get(str(sigla).strip())
+                if not ev_a:
                     continue
-                if a.get("id") and any(x is a for x in ev["articoli"]):
-                    ev["articoli"] = [x for x in ev["articoli"] if x is not a]
-                    ev.pop("riferimento", None)
-                    eventi.append({"titolo_neutro": a["titolo"], "fatto_specifico": a["titolo"],
-                                   "tema": "altro", "articoli": [a], "tolto_dal_trio": True})
-                    tolti += 1
-                    print("    confronto %d: tolto %s (%s) - %s"
-                          % (n, col, a["fonte"], (voce.get("motivo") or "")[:90]))
-        print("  controllo dei tre titoli (giro %d): %d titoli tolti" % (giro, tolti))
+                ev, a = ev_a
+                if not any(x is a for x in ev["articoli"]):
+                    continue
+                ev["articoli"] = [x for x in ev["articoli"] if x is not a]
+                eventi.append({"titolo_neutro": a["titolo"], "fatto_specifico": a["titolo"],
+                               "tema": "altro", "articoli": [a], "tolto_dal_controllo": True})
+                cambiati.add(id(ev))
+                tolti += 1
+                print("    tolto %s (%s) - %s" % (sigla, a["fonte"], (voce.get("motivo") or "")[:90]))
+        print("  controllo finale dei titoli (giro %d): %d confronti, %d titoli tolti"
+              % (giro, len(cand), tolti))
         if not tolti:
             return eventi
         eventi = arricchisci(eventi)
+        da_controllare = cambiati
     return eventi
 
 
