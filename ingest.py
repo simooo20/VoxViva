@@ -128,7 +128,8 @@ RUMORE = re.compile(
     # --- gossip ---
     r"\bgossip\b|paparazz|\bflirt\b|beccati insieme|\bbelen\b|bel\u00e9n|wanda nara|"
     # --- oroscopo / meteo-chiacchiera ---
-    r"oroscopo|segno zodiacale|previsioni meteo|che tempo (fa|far\u00e0)"
+    r"oroscopo|segno zodiacale|previsioni meteo|che tempo (fa|far\u00e0)|"
+    r"\bmeteo\b|giuliacci|ilmeteo|3bmeteo|crollo termico|ondata di (caldo|freddo)"
     r")",
     re.I,
 )
