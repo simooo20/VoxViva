@@ -533,9 +533,9 @@ def main():
         # lo sport non si pubblica (decisione di Simone): vedi TEMI_ESCLUSI in cluster.py
         if ev.get("tema") == "sport":
             return False
-        # spettacolo/cultura (premi, concerti, tv) si pubblica solo se ha davvero
-        # due letture opposte (Simone, 28/9: "Madonna sbanca gli Mtv Awards" no)
-        if ev.get("tema") == "cultura" and ev.get("divergenza") != "alta":
+        # spettacolo/cultura (premi, concerti, tv, celebrita') non si pubblica
+        # (Simone, 28/9: "Madonna sbanca gli Mtv Awards" non ha lati)
+        if ev.get("tema") == "cultura":
             return False
         # mai un confronto senza analisi (niente divergenza/nota = pagina povera)
         if not ev.get("nota") or not ev.get("divergenza"):

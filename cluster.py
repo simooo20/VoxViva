@@ -101,7 +101,7 @@ SOGLIA_CARICO = 2.5
 # di sinistra/centro/destra. Il filtro in ingest.py toglie gran parte dello
 # sport dall'indirizzo e dalle parole; questo e' il secondo filtro, sul tema
 # che il modello assegna al gruppo, per quello che sfugge.
-TEMI_ESCLUSI = {"sport"}
+TEMI_ESCLUSI = {"sport", "cultura"}   # cultura = spettacolo, musica, premi, tv (28/9)
 
 
 def _dt(iso):
@@ -165,7 +165,8 @@ def _prezzo(modello):
 
 def _costo(modello, uso):
     pin, pout = _prezzo(modello)
-    return uso.input_tokens / 1e6 * pin + uso.output_tokens / 1e6 * pout
+    costo = uso.input_tokens / 1e6 * pin + uso.output_tokens / 1e6 * pout
+    return costo * (0.5 if USA_BATCH else 1.0)     # la Batch API costa la meta'
 
 
 class Budget:
