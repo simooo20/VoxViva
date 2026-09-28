@@ -1136,6 +1136,14 @@ def arricchisci(eventi):
         scelto_c = (ev.get("scelta") or {}).get("centro")
         if scelto_c:
             a_c = next((a for a in ev["articoli"] if a.get("id") == scelto_c and a.get("area") == "C"), None)
+            # 28/9: il modello aveva messo al centro Rai News con «La chiamavamo
+            # 'Satana'». Se il titolo scelto ha virgolette/parole cariche e il
+            # riferimento calcolato e' piu' calmo, vince il piu' calmo.
+            def _agitato(t):
+                return allarme(t) + 1.5 * sum(t.count(c) for c in '«"“')
+            if a_c is not None and ev["riferimento"] and \
+                    _agitato(a_c.get("titolo", "")) > _agitato(ev["riferimento"].get("titolo", "")):
+                a_c = None
             if a_c is not None:
                 ev["riferimento"] = dict(a_c, agenzia=a_c.get("dominio", "") in AGENZIE_CENTRO)
         ev["totale"] = len(reali)          # conta le testate con una linea, non l'aggregatore
@@ -1350,6 +1358,10 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
                 raise
             except Exception as exc:
                 print("  analisi di un blocco fallita: %s" % str(exc)[:150])
+    for i in idx:                                  # titolo grande: mai piu' lungo di 70 caratteri
+        t = eventi[i].get("titolo_neutro", "")
+        if len(t) > 70:
+            eventi[i]["titolo_lungo"] = True
     riscrivi_titoli_copiati(client, eventi, idx)
     senza = sum(1 for i in idx if not eventi[i].get("nota"))
     print("  analisi: %d confronti pubblicabili, %d senza nota" % (len(idx), senza))
@@ -1390,6 +1402,8 @@ Chiama registra_titoli."""
 
 
 def _titolo_copiato_da(ev):
+    if ev.get("titolo_lungo") and len(ev.get("titolo_neutro", "")) > 70:
+        return True            # troppo lungo: va riscritto come i copiati
     return any(_titolo_copiato(ev.get("titolo_neutro", ""), a.get("titolo", ""))
                for a in ev["articoli"])
 
