@@ -558,6 +558,10 @@ def main():
         # (Simone, 28/9: "Madonna sbanca gli Mtv Awards" non ha lati)
         if ev.get("tema") == "cultura":
             return False
+        # l'analisi ha visto che i tre titoli in pagina parlano di fatti diversi
+        # (28/9, Garlasco: fronti diversi della stessa vicenda scambiati per divergenza)
+        if ev.get("fuori_tema"):
+            return False
         # mai un confronto senza analisi (niente divergenza/nota = pagina povera)
         if not ev.get("nota") or not ev.get("divergenza"):
             return False

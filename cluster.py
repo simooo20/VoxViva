@@ -375,6 +375,10 @@ SCHEMA_ANALIZZA = {
                     "type": "object",
                     "properties": {
                         "evento": {"type": "integer", "description": "Il numero dell'evento come indicato nell'elenco."},
+                        "stesso_fatto": {
+                            "type": "boolean",
+                            "description": "true SOLO se i TRE titoli in colonna raccontano lo stesso fatto specifico (magari con parole opposte). false se uno o piu' parlano di un altro aspetto, un altro fronte, un'altra dichiarazione o un altro momento della vicenda.",
+                        },
                         "titolo": {
                             "type": "string",
                             "description": "La riga grande in cima al confronto: l'ARGOMENTO essenziale ma RICONOSCIBILE, 4-9 parole, massimo 60 caratteri: cosa e' successo + a chi/dove, quanto basta perche' non possa essere 'un fatto qualsiasi'. Buoni: 'Reggio Emilia, aggredisce una donna e investe due persone', 'Espulso il trapper Bratan dopo il blocco della Milano-Meda', 'Tetto ai prezzi dei carburanti di Eni e Ip'. Troppo poveri: 'Aggressione a Reggio Emilia', 'Incidente a Reggio Emilia'. Niente giudizi ne' dettagli secondari: i dettagli li danno i titoli sotto. Deve essere diverso da tutti i titoli mostrati.",
@@ -382,7 +386,7 @@ SCHEMA_ANALIZZA = {
                         "divergenza": {
                             "type": "string",
                             "enum": ["bassa", "media", "alta"],
-                            "description": "bassa = i titoli raccontano il fatto quasi allo stesso modo, nessuna parola carica. media = cambiano enfasi, cosa mettono in prima posizione, cosa omettono. alta = uno dei titoli cambia il protagonista o la colpa, OPPURE introduce un'inquadratura ideologica assente negli altri: dettagli di nazionalita'/origine/religione, un bersaglio politico (governo, opposizione, UE, sindacati), parole cariche di giudizio («terrore», «vergogna», «schiaffo», «regime», «invasione»), un'accusa. Esempio: ANSA «Aggredisce donna e investe due persone» contro Il Giornale «Terrore a Reggio Emilia, 26enne di origini egiziane...» = ALTA. Non livellare verso il basso: descrivi la differenza che c'e' davvero, senza inventarla.",
+                            "description": "Misura SOLO come viene raccontato lo STESSO fatto: parole, accento, cosa viene messo davanti, cosa viene taciuto (Simone, 28/9: 'stessa notizia, stesso fatto, detto in due modi'). bassa = i tre titoli dicono quasi la stessa cosa con parole simili. media = stesso fatto, ma cambiano enfasi, ordine, dettagli scelti. alta = stesso fatto, ma un titolo cambia protagonista o colpa, o usa un'inquadratura ideologica assente negli altri (origine/nazionalita', bersaglio politico, parole cariche come 'terrore', 'vergogna', 'schiaffo'). ATTENZIONE: se i titoli parlano di aspetti o fronti DIVERSI della vicenda (es. a Garlasco uno la chiusura delle indagini, l'altro una perizia, l'altro una trasmissione tv) NON e' divergenza: in quel caso metti stesso_fatto=false.",
                         },
                         "duello": {
                             "type": "string",
@@ -393,7 +397,7 @@ SCHEMA_ANALIZZA = {
                             "description": "Due o tre frasi in italiano che spiegano la differenza concreta fra i titoli: quale parola cambia, cosa viene messo davanti, cosa viene taciuto, quale numero viene scelto. Descrittivo, non giudicante: si scrive cosa fanno i titoli, non che una testata è in malafede. Cita le parole tra virgolette.",
                         },
                     },
-                    "required": ["evento", "titolo", "divergenza", "duello", "nota"],
+                    "required": ["evento", "stesso_fatto", "titolo", "divergenza", "duello", "nota"],
                 },
             }
         },
@@ -1509,6 +1513,8 @@ def _analizza_blocco(client, eventi, candidati):
                                  for a in eventi[idx]["articoli"]):
                 eventi[idx]["titolo_neutro"] = nuovo
             eventi[idx]["divergenza"] = voce.get("divergenza", "media")
+            if voce.get("stesso_fatto") is False:
+                eventi[idx]["fuori_tema"] = True     # render.py non lo pubblica
             eventi[idx]["duello"] = voce.get("duello", "").strip()
             eventi[idx]["nota"] = voce.get("nota", "").strip()
 
