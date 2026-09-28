@@ -90,6 +90,11 @@ AGENZIE = ("ansa.it", "agi.it", "adnkronos.com", "italpress.com", "lapresse.it")
 import re as _re
 import unicodedata
 
+_IDENTITA = _re.compile(
+    r"^(origini|rom|egizian|marocchin|tunisin|nordafrican|algerin|stranier|"
+    r"extracomunitar|immigrat|clandestin|profug|migrant|islamic|islamist|"
+    r"albanes|romen|nigerian|pakistan|bengales|senegales|magrebin)")
+
 _PAROLE_ALLARME = {
     # emergenza / catastrofe
     "shock", "choc", "allarme", "emergenza", "caos", "dramma", "tragedia",
@@ -133,6 +138,10 @@ def allarme(titolo: str) -> float:
     low = t.lower()
     parole = _re.findall(r"[a-zà-ù']+", low)
     lex = sum(1 for w in parole if w in _PAROLE_ALLARME)
+    # dettagli di origine/nazionalita' nel titolo: sono il segnale classico
+    # dell'inquadratura di parte (ANSA "aggredisce una donna" vs "26enne di
+    # origini egiziane"). Contano come una parola carica.
+    lex += sum(1 for w in parole if _IDENTITA.match(w))
     esclam = low.count("!") + low.count("?")
     virgolette = t.count("«") + t.count("“") + t.count("\"") + (1 if "'" in t and '"' not in t else 0)
     maiusc = len([m for m in _MAIUSC.findall(t) if len(m) >= 4])   # REPORTOPOLI, SHOCK

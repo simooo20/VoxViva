@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from scala import allarme
 from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
                    coppia_divergente, estremi, ordina_da_sinistra,
                    riferimento_centro)
@@ -85,6 +86,13 @@ ROMA = ZoneInfo("Europe/Rome")
 # FINESTRA_ORE ore che copre meglio sinistra/centro/destra; chi sta fuori esce.
 # Si cambia senza toccare il codice con la variabile ILVAGLIO_FINESTRA_ORE.
 FINESTRA_ORE = float(os.environ.get("ILVAGLIO_FINESTRA_ORE", "5"))
+# Eccezione (Simone, 28/9): un titolo di sinistra o di destra MOLTO carico
+# (allarme >= SOGLIA_CARICO: parole cariche, origini/nazionalita'...) resta nel
+# confronto anche se scritto fino a FINESTRA_LUNGA ore prima/dopo, perche' e'
+# proprio la versione che rende il confronto interessante. Che parli dello
+# STESSO fatto lo garantiscono verifica() prima e controlla_trio() dopo.
+FINESTRA_LUNGA = float(os.environ.get("ILVAGLIO_FINESTRA_LUNGA", "12"))
+SOGLIA_CARICO = 2.5
 
 # Temi che NON si pubblicano (decisione di Simone): lo sport non ha una lettura
 # di sinistra/centro/destra. Il filtro in ingest.py toglie gran parte dello
@@ -987,6 +995,17 @@ def stringi_nel_tempo(eventi, finestra_ore=FINESTRA_ORE):
             if punteggio is None or p > punteggio:
                 migliore, punteggio = dentro, p
         tenuti = {id(a) for a in migliore}
+        # i titoli di parte molto carichi restano anche se un po' fuori orario
+        t_min = min(_dt(a["pubblicato"]).timestamp() for a in migliore)
+        t_max = max(_dt(a["pubblicato"]).timestamp() for a in migliore)
+        extra = FINESTRA_LUNGA * 3600
+        for a in arts:
+            if id(a) in tenuti or a.get("area") not in ("SR", "CS", "CD", "DR"):
+                continue
+            t = _dt(a["pubblicato"]).timestamp()
+            if t_max - extra <= t <= t_min + extra and allarme(a.get("titolo", "")) >= SOGLIA_CARICO:
+                tenuti.add(id(a))
+                a["fuori_orario_carico"] = True
         fuori = [a for a in ev["articoli"] if id(a) not in tenuti]
         if not fuori:
             continue
@@ -1060,6 +1079,101 @@ def arricchisci(eventi):
     # distanti, poi i piu' seguiti, poi i piu' recenti.
     eventi.sort(key=lambda e: (e["ampiezza"], len(e["aree_presenti"]), e["totale"], e["ultimo"]),
                 reverse=True)
+    return eventi
+
+
+SCHEMA_TRIO = {
+    "name": "registra_controllo",
+    "description": "Per ogni confronto, i titoli che NON raccontano lo stesso fatto degli altri.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "controlli": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "confronto": {"type": "integer"},
+                        "fuori": {"type": "array", "items": {"type": "string"},
+                                  "description": "Le colonne (sinistra/centro/destra) il cui titolo racconta un ALTRO fatto. Vuota se i tre sono lo stesso fatto."},
+                        "motivo": {"type": "string"},
+                    },
+                    "required": ["confronto", "fuori", "motivo"],
+                },
+            }
+        },
+        "required": ["controlli"],
+    },
+}
+
+PROMPT_TRIO = """Questi sono i confronti che stanno per essere pubblicati: per ognuno, i TRE titoli che il lettore vedra' affiancati (sinistra, centro, destra). Il sito afferma che raccontano LA STESSA NOTIZIA. Controlla che sia vero.
+
+Per ogni confronto indica in "fuori" la colonna il cui titolo racconta un FATTO DIVERSO dagli altri due, anche se collegato. Esempi di fatto diverso:
+- «L'Idf elimina il terrorista che rapi' Noa Argamani» e «Olmert: Netanyahu sapeva del 7 ottobre» -> stessa vicenda di fondo, fatti DIVERSI: fuori.
+- «Garofano sentito in procura» e «La difesa di Sempio attende le prove» -> fatti diversi.
+- «L'Iran propone una tregua» e «Trump respinge la proposta» -> momenti diversi: fuori quello che non contiene ancora il fatto nuovo.
+
+NON e' fuori un titolo che racconta lo stesso fatto con parole diverse, cariche, di parte, con dettagli in piu' (origine, colpe, bersagli politici) o come commento: quella e' la differenza che il sito vuole mostrare.
+
+{confronti}
+
+Chiama registra_controllo con un controllo per ogni confronto."""
+
+
+def controlla_trio(client, eventi, giri=2):
+    """Controllo finale sui tre titoli che vanno DAVVERO in pagina (28/9, caso
+    Israele: Fanpage su Olmert-Netanyahu accanto all'uccisione del rapitore di
+    Noa). Il titolo di una colonna che racconta un altro fatto viene tolto dal
+    gruppo: al giro dopo la colonna mostra il titolo successivo, oppure resta
+    vuota e il confronto non si pubblica."""
+    def _pieno(ev):
+        return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
+    for giro in range(1, giri + 1):
+        cand = [ev for ev in eventi if _pieno(ev) and ev.get("tema") not in TEMI_ESCLUSI]
+        if not cand:
+            return eventi
+        trii, blocchi = [], []
+        for n, ev in enumerate(cand, 1):
+            sx, dx = coppia_divergente(ev["per_colonna"].get("sinistra", []),
+                                       ev["per_colonna"].get("destra", []))
+            rif = ev.get("riferimento")
+            trio = {"sinistra": sx, "centro": rif, "destra": dx}
+            trii.append(trio)
+            righe = ["Confronto %d" % n]
+            for col in ("sinistra", "centro", "destra"):
+                a = trio[col]
+                if a:
+                    righe.append('  %s (%s, %s): "%s"' % (col, a["fonte"], _ora_breve(a.get("pubblicato", "")), a["titolo"]))
+            blocchi.append("\n".join(righe))
+        try:
+            dati, uso = chiama(client, PROMPT_TRIO.format(confronti="\n\n".join(blocchi)), SCHEMA_TRIO)
+        except BudgetEsaurito:
+            raise
+        except Exception as exc:
+            print("  controllo dei tre titoli saltato: %s" % str(exc)[:120])
+            return eventi
+        tolti = 0
+        for voce in dati.get("controlli", []):
+            n = voce.get("confronto", 0)
+            if not isinstance(n, int) or not (1 <= n <= len(cand)):
+                continue
+            ev, trio = cand[n - 1], trii[n - 1]
+            for col in voce.get("fuori") or []:
+                a = trio.get(str(col).strip().lower())
+                if a is None:
+                    continue
+                if a.get("id") and any(x is a for x in ev["articoli"]):
+                    ev["articoli"] = [x for x in ev["articoli"] if x is not a]
+                    ev.pop("riferimento", None)
+                    eventi.append({"titolo_neutro": a["titolo"], "fatto_specifico": a["titolo"],
+                                   "tema": "altro", "articoli": [a], "tolto_dal_trio": True})
+                    tolti += 1
+                    print("    confronto %d: tolto %s (%s) - %s"
+                          % (n, col, a["fonte"], (voce.get("motivo") or "")[:90]))
+        print("  controllo dei tre titoli (giro %d): %d titoli tolti" % (giro, tolti))
+        if not tolti:
+            return eventi
+        eventi = arricchisci(eventi)
     return eventi
 
 
@@ -1296,6 +1410,11 @@ def main():
     if esclusi:
         print("  gruppi di sport scartati (non si pubblicano): %d" % esclusi)
     eventi = arricchisci(eventi)
+    if not args.no_verifica:
+        try:
+            eventi = controlla_trio(client, eventi)
+        except BudgetEsaurito as exc:
+            print("  controllo dei tre titoli saltato: %s" % exc)
     if not args.no_analisi:
         try:
             analizza(client, eventi, args.analizza)
