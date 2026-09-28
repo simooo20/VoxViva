@@ -376,7 +376,7 @@ SCHEMA_ANALIZZA = {
                         "evento": {"type": "integer", "description": "Il numero dell'evento come indicato nell'elenco."},
                         "titolo": {
                             "type": "string",
-                            "description": "La riga grande in cima al confronto: SOLO L'ARGOMENTO, ridotto al minimo, 2-6 parole, massimo 45 caratteri (es. 'Omicidio a Torino', 'Espulso il trapper Bratan', 'Suppletive in Calabria', 'Tetto ai prezzi dei carburanti'). Niente dettagli, niente nomi secondari, niente giudizi: i dettagli li danno i titoli sotto, a partire da quello asciutto del centro. Deve essere diverso da tutti i titoli mostrati.",
+                            "description": "La riga grande in cima al confronto: l'ARGOMENTO essenziale ma RICONOSCIBILE, 4-9 parole, massimo 60 caratteri: cosa e' successo + a chi/dove, quanto basta perche' non possa essere 'un fatto qualsiasi'. Buoni: 'Reggio Emilia, aggredisce una donna e investe due persone', 'Espulso il trapper Bratan dopo il blocco della Milano-Meda', 'Tetto ai prezzi dei carburanti di Eni e Ip'. Troppo poveri: 'Aggressione a Reggio Emilia', 'Incidente a Reggio Emilia'. Niente giudizi ne' dettagli secondari: i dettagli li danno i titoli sotto. Deve essere diverso da tutti i titoli mostrati.",
                         },
                         "divergenza": {
                             "type": "string",
@@ -1276,6 +1276,46 @@ def controlla_trio(client, eventi, giri=2):
     return eventi
 
 
+def decodifica_link(eventi):
+    """I titoli arrivati da Google News hanno un link news.google.com: il lettore
+    deve finire sul sito del giornale (Simone, 28/9: «clicco HuffPost e mi apre
+    Google News»). Si decodificano i link dei titoli MOSTRATI nei confronti a
+    tre colonne (quelli cliccabili). Libreria googlenewsdecoder; se fallisce il
+    link resta quello di Google, che comunque porta all'articolo."""
+    try:
+        from googlenewsdecoder import gnewsdecoder
+    except Exception as exc:
+        print("  decodifica link saltata: %s" % str(exc)[:80])
+        return eventi
+    def _pieno(ev):
+        return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
+    bersagli = []
+    for ev in eventi:
+        if not _pieno(ev) or ev.get("tema") in TEMI_ESCLUSI:
+            continue
+        sx, dx = lati_mostrati(ev)
+        rif_id = (ev.get("riferimento") or {}).get("id")
+        for a in ev["articoli"]:
+            if (a is sx or a is dx or a.get("id") == rif_id) and "news.google.com" in (a.get("url") or ""):
+                bersagli.append(a)
+    if not bersagli:
+        return eventi
+    ok = 0
+    for k in range(0, len(bersagli), 40):
+        blocco = bersagli[k:k + 40]
+        try:
+            res = gnewsdecoder([a["url"] for a in blocco], interval=0.3)
+        except Exception as exc:
+            print("  decodifica link fallita: %s" % str(exc)[:100])
+            break
+        for a, r in zip(blocco, res if isinstance(res, list) else [res]):
+            if isinstance(r, dict) and r.get("success") and r.get("decoded_url"):
+                a["url"] = r["decoded_url"]
+                ok += 1
+    print("  link Google News convertiti nel link del giornale: %d su %d" % (ok, len(bersagli)))
+    return arricchisci(eventi)
+
+
 def analizza(client, eventi, quanti, ampiezza_minima=2):
     """Divergenza, duello, nota e titolo grande per i confronti PUBBLICABILI.
 
@@ -1339,7 +1379,7 @@ SCHEMA_TITOLI = {
 PROMPT_TITOLI = """Per ogni confronto qui sotto il titolo grande in cima e' risultato IDENTICO (o quasi) al titolo di una delle testate mostrate sotto. Non va bene: il titolo grande deve essere una sintesi NOSTRA, scritta con parole diverse da tutti i titoli.
 
 Per ogni confronto scrivi un titolo nuovo:
-- dice SOLO l'argomento, ridotto al minimo: 2-6 parole, massimo 45 caratteri (es. "Omicidio a Torino", "Espulso il trapper Bratan");
+- dice l'argomento essenziale ma riconoscibile: 4-9 parole, massimo 60 caratteri, cosa e' successo + a chi/dove (es. "Espulso il trapper Bratan dopo il blocco della Milano-Meda"; NON "Aggressione a Reggio Emilia", troppo generico);
 - nessun dettaglio, nessun aggettivo valutativo, nessuna virgoletta;
 - NON riusare la frase di nessuno dei titoli (es. "Ubriaco alla guida, travolge un operaio sulla A14" -> "Operaio ucciso sulla A14").
 
@@ -1535,6 +1575,10 @@ def main():
         except Exception as exc:
             print("  analisi saltata per un errore momentaneo: %s" % str(exc)[:150])
 
+    try:
+        eventi = decodifica_link(eventi)
+    except Exception as exc:
+        print("  decodifica link saltata: %s" % str(exc)[:100])
     principali = [e for e in eventi if e.get("principale")]
     duelli = [e for e in eventi if e["ampiezza"] >= 2]
     estremi_opposti = [e for e in eventi if e["ampiezza"] == len(AREE) - 1]
