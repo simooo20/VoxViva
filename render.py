@@ -146,13 +146,15 @@ header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22
 .stat span{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
 
 /* legenda della scala: cinque caselle arrotondate S S C D D (grafica di Simone) */
-.scala{display:flex;gap:10px;margin-top:14px;max-width:560px}
-.scala div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
-  font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-align:center;
-  font-weight:600;line-height:1.25;color:var(--ink-3)}
-.scala b{display:flex;align-items:center;justify-content:center;width:100%;
-  max-width:64px;aspect-ratio:1/1;border-radius:9px;color:#fff;
-  font-family:var(--display);font-weight:800;font-size:30px;line-height:1}
+/* legenda piccola: cinque caselle attaccate S S C D D, come la grafica di
+   Simone; ai lati solo "sinistra" e "destra", il nome completo nel tooltip */
+.scala{display:flex;align-items:center;gap:3px;margin-top:12px}
+.scala .estremo{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+  font-weight:600;color:var(--ink-3);margin:0 6px}
+.scala .estremo:first-child{margin-left:0}
+.scala div{display:inline-flex}
+.scala b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:4px;color:#fff;font-family:"Montserrat",var(--display);font-weight:900;font-size:11px;line-height:1}
 .scala .s-SR b{background:var(--SR)} .scala .s-CS b{background:var(--CS)}
 .scala .s-C b{background:var(--C)}
 .scala .s-CD b{background:var(--CD)} .scala .s-DR b{background:var(--DR)}
@@ -343,7 +345,7 @@ footer .fonti{font-size:12.5px;color:var(--ink-3);line-height:1.7}
   .col:last-child{border-bottom:0}
   .fcols{grid-template-columns:1fr;gap:24px}
   .brand h1{font-size:30px} .claim{font-size:15px}
-  .scala{gap:6px} .scala div{font-size:8.5px} .scala b{font-size:22px;border-radius:7px}
+  .scala .estremo{font-size:9.5px}
 }
 """
 
@@ -623,7 +625,9 @@ def main():
     stat_html = "".join('<div class="stat"><b>%s</b><span>%s</span></div>' % (n, t) for n, t in stat)
 
     LETTERE = {"SR": "S", "CS": "S", "C": "C", "CD": "D", "DR": "D"}
-    scala_html = "".join('<div class="s-%s"><b>%s</b>%s</div>' % (x, LETTERE[x], e(NOMI[x])) for x in AREE)
+    scala_html = ('<span class="estremo">sinistra</span>'
+                  + "".join('<div class="s-%s" title="%s"><b>%s</b></div>' % (x, e(NOMI[x]), LETTERE[x]) for x in AREE)
+                  + '<span class="estremo">destra</span>')
 
     avviso = ""
     if args.demo:
