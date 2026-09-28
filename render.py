@@ -104,13 +104,16 @@ CSS = """
   --ink:#171717; --ink-2:#4d4d4d; --ink-3:#6f6f6f;
   --line:#d3d3d3; --line-2:#e2e2e2; --bg:#e9e9e9; --card:#ffffff;
   --accent:#F25623; --accent-bg:#fdece4;
-  /* niente altri colori: la scala è in grigi. A dire l'orientamento sono le
-     etichette, la posizione e il meter ARANCIONE (non colori diversi per lato). */
-  --SR:#171717; --SR-bg:#e3e3e3;
-  --CS:#4d4d4d; --CS-bg:#e8e8e8;
-  --C:#6f6f6f;  --C-bg:#ededed;
-  --CD:#4d4d4d; --CD-bg:#e8e8e8;
-  --DR:#171717; --DR-bg:#e3e3e3;
+  /* SCALA POLITICA (Simone, 28/9): rosso -> rosa -> grigio -> lilla -> blu,
+     quadrati arrotondati con S S C D D in bianco. --X = colore pieno della
+     casella; --X-t = stesso colore reso leggibile come testo su bianco;
+     --X-bg = tinta chiara per le etichette. L'arancione resta il colore del
+     marchio (striscia in cima, divergenza alta). */
+  --SR:#FF0000; --SR-t:#E00000; --SR-bg:#ffe0e0;
+  --CS:#FF8888; --CS-t:#D9534F; --CS-bg:#ffeded;
+  --C:#B4B4B4;  --C-t:#6f6f6f;  --C-bg:#efefef;
+  --CD:#8C8CFF; --CD-t:#5a5ae6; --CD-bg:#ececff;
+  --DR:#0000FF; --DR-t:#0000D6; --DR-bg:#e0e0ff;
   /* direzione B: news digitale moderno, tutto sans. Space Grotesk per testata e
      titoli grossi, Inter per il resto. Niente serif (era la "faccia da AI"). */
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -138,16 +141,17 @@ header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22
 .stat b{display:block;font-size:23px;font-family:var(--display);font-weight:700;line-height:1.1;letter-spacing:-.02em}
 .stat span{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
 
-/* legenda della scala */
-.scala{display:flex;gap:0;margin-top:12px;border-radius:7px;overflow:hidden;
-  border:1px solid var(--line);max-width:760px}
-.scala div{flex:1;padding:8px 10px;font-size:10.5px;text-transform:uppercase;
-  letter-spacing:.05em;text-align:center;font-weight:700;line-height:1.3}
-.scala .s-SR{background:var(--SR-bg);color:var(--SR)}
-.scala .s-CS{background:var(--CS-bg);color:var(--CS)}
-.scala .s-C{background:var(--C-bg);color:var(--C)}
-.scala .s-CD{background:var(--CD-bg);color:var(--CD)}
-.scala .s-DR{background:var(--DR-bg);color:var(--DR)}
+/* legenda della scala: cinque caselle arrotondate S S C D D (grafica di Simone) */
+.scala{display:flex;gap:10px;margin-top:14px;max-width:560px}
+.scala div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
+  font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-align:center;
+  font-weight:600;line-height:1.25;color:var(--ink-3)}
+.scala b{display:flex;align-items:center;justify-content:center;width:100%;
+  max-width:64px;aspect-ratio:1/1;border-radius:9px;color:#fff;
+  font-family:var(--display);font-weight:800;font-size:30px;line-height:1}
+.scala .s-SR b{background:var(--SR)} .scala .s-CS b{background:var(--CS)}
+.scala .s-C b{background:var(--C)}
+.scala .s-CD b{background:var(--CD)} .scala .s-DR b{background:var(--DR)}
 .scala-nota{font-size:11px;color:var(--ink-3);margin:6px 0 0;max-width:760px}
 
 .avviso{background:#fff8e1;border:1px solid #f0dfa8;border-radius:8px;
@@ -198,10 +202,10 @@ main{padding:34px 0 10px}
   margin-bottom:8px}
 .polo .testo{font-family:var(--serif);font-size:17px;line-height:1.34;display:block}
 .polo-c .testo{font-size:14.5px;color:var(--ink-2)}
-.polo-c .chi{color:var(--C)}
-.a-SR .chi,.a-SR .area{color:var(--SR)} .a-CS .chi,.a-CS .area{color:var(--CS)}
-.a-C .chi,.a-C .area{color:var(--C)}
-.a-CD .chi,.a-CD .area{color:var(--CD)} .a-DR .chi,.a-DR .area{color:var(--DR)}
+.polo-c .chi{color:var(--C-t)}
+.a-SR .chi,.a-SR .area{color:var(--SR-t)} .a-CS .chi,.a-CS .area{color:var(--CS-t)}
+.a-C .chi,.a-C .area{color:var(--C-t)}
+.a-CD .chi,.a-CD .area{color:var(--CD-t)} .a-DR .chi,.a-DR .area{color:var(--DR-t)}
 .polo-sx{border-left:3px solid transparent} .polo-dx{border-right:3px solid transparent}
 .polo-sx.a-SR{border-left-color:var(--SR)} .polo-sx.a-CS{border-left-color:var(--CS)}
 .polo-sx.a-C{border-left-color:var(--C)}
@@ -260,7 +264,10 @@ main{padding:34px 0 10px}
 /* meter L-C-R stile AllSides: 5 celle */
 .meter{display:inline-flex;gap:2px}
 .meter i{width:11px;height:11px;border-radius:2px;background:#e6e8ec;display:block}
-.meter i.on{background:var(--accent)}   /* la cella accesa = arancione, mostra la posizione */
+/* la cella accesa prende il colore della sua casella nella scala */
+.meter i.on.m-SR{background:var(--SR)} .meter i.on.m-CS{background:var(--CS)}
+.meter i.on.m-C{background:var(--C)}
+.meter i.on.m-CD{background:var(--CD)} .meter i.on.m-DR{background:var(--DR)}
 
 @media(max-width:820px){
   .ru-cols{grid-template-columns:1fr;gap:0}
@@ -281,17 +288,17 @@ main{padding:34px 0 10px}
 .col:last-child{border-right:0}
 .col-tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
   padding-bottom:7px;margin-bottom:11px;border-bottom:2px solid var(--line)}
-.col-sinistra .col-tit{color:var(--CS)} .col-centro .col-tit{color:var(--C)}
-.col-destra .col-tit{color:var(--CD)}
+.col-sinistra .col-tit{color:var(--CS-t)} .col-centro .col-tit{color:var(--C-t)}
+.col-destra .col-tit{color:var(--CD-t)}
 .tit{display:block;margin-bottom:13px}
 .tit:last-child{margin-bottom:0}
 .tit .riga{font-size:11px;color:var(--ink-3);display:block;margin-bottom:2px}
 .tit .riga b{font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .tit .riga .pos{font-size:10px;padding:1px 5px;border-radius:3px;margin-left:5px;
   letter-spacing:.04em;text-transform:uppercase}
-.pos.p-SR{background:var(--SR-bg);color:var(--SR)} .pos.p-CS{background:var(--CS-bg);color:var(--CS)}
-.pos.p-C{background:var(--C-bg);color:var(--C)}
-.pos.p-CD{background:var(--CD-bg);color:var(--CD)} .pos.p-DR{background:var(--DR-bg);color:var(--DR)}
+.pos.p-SR{background:var(--SR-bg);color:var(--SR-t)} .pos.p-CS{background:var(--CS-bg);color:var(--CS-t)}
+.pos.p-C{background:var(--C-bg);color:var(--C-t)}
+.pos.p-CD{background:var(--CD-bg);color:var(--CD-t)} .pos.p-DR{background:var(--DR-bg);color:var(--DR-t)}
 .tit .testo{font-family:var(--serif);font-size:15px;line-height:1.36;color:var(--ink);
   border-bottom:1px solid transparent}
 .tit:hover .testo{border-bottom-color:var(--ink-3)}
@@ -332,7 +339,7 @@ footer .fonti{font-size:12.5px;color:var(--ink-3);line-height:1.7}
   .col:last-child{border-bottom:0}
   .fcols{grid-template-columns:1fr;gap:24px}
   .brand h1{font-size:30px} .claim{font-size:15px}
-  .scala div{font-size:9px;padding:7px 4px}
+  .scala{gap:6px} .scala div{font-size:8.5px} .scala b{font-size:22px;border-radius:7px}
 }
 """
 
@@ -611,7 +618,8 @@ def main():
     ]
     stat_html = "".join('<div class="stat"><b>%s</b><span>%s</span></div>' % (n, t) for n, t in stat)
 
-    scala_html = "".join('<div class="s-%s">%s</div>' % (x, e(NOMI[x])) for x in AREE)
+    LETTERE = {"SR": "S", "CS": "S", "C": "C", "CD": "D", "DR": "D"}
+    scala_html = "".join('<div class="s-%s"><b>%s</b>%s</div>' % (x, LETTERE[x], e(NOMI[x])) for x in AREE)
 
     avviso = ""
     if args.demo:
