@@ -524,13 +524,30 @@ def main():
     completi = [ev for ev in eventi if completo(ev)]
     scartati_incompleti = len(eventi) - len(completi)
 
+    # Il sito vive di DIVERGENZA (richiesta di Simone, 28/9): la cronaca senza
+    # lati (un incidente stradale, un fatto che tutti titolano uguale) a
+    # divergenza bassa non si pubblica, salvo che senza di lei restino meno di
+    # MIN_CONFRONTI confronti. I temi politici hanno la precedenza a parita'.
+    MIN_CONFRONTI = 8
+    SENZA_LATI = {"cronaca", "altro", "cultura"}
+    def _piatta(ev):
+        return ev.get("divergenza") == "bassa" and ev.get("tema") in SENZA_LATI
+    buoni = [ev for ev in completi if not _piatta(ev)]
+    if len(buoni) >= MIN_CONFRONTI:
+        print("  cronaca a divergenza bassa lasciata fuori: %d" % (len(completi) - len(buoni)))
+        completi = buoni
+    else:
+        completi = buoni + [ev for ev in completi if _piatta(ev)][:MIN_CONFRONTI - len(buoni)]
+
     # Il valore del sito e' la DIVERGENZA: dove destra e sinistra raccontano la
     # stessa notizia in modo opposto. Quindi ordiniamo mettendo davanti i
     # confronti a divergenza alta, poi media, poi bassa. A parita', l'agenda
     # (per le principali) o l'ampiezza della scala (per gli altri).
     DIV_RANK = {"alta": 3, "media": 2, "bassa": 1}
+    POLITICI = {"politica interna", "immigrazione", "giustizia", "esteri", "economia", "societa", "ambiente"}
     def div_rank(ev):
-        return DIV_RANK.get(ev.get("divergenza"), 0)
+        # divergenza prima; a parita', i temi politici prima della cronaca
+        return DIV_RANK.get(ev.get("divergenza"), 0) + (0.5 if ev.get("tema") in POLITICI else 0)
 
     principali = sorted([ev for ev in completi if ev.get("principale")],
                         key=lambda e: (-div_rank(e), e.get("ordine_agenzia", 999), -e["ampiezza"]))[: args.max]
@@ -729,6 +746,15 @@ def main():
     if senza_analisi:
         allarmi.append("%d confronti senza divergenza/nota: %s"
                        % (len(senza_analisi), "; ".join(senza_analisi[:5])))
+    import difflib
+    def _copiato(t, u):
+        t, u = (t or "").strip().lower(), (u or "").strip().lower()
+        return bool(t and u) and (t == u or t.startswith(u) or u.startswith(t)
+                                  or difflib.SequenceMatcher(None, t, u).ratio() > 0.85)
+    copiati = [ev["titolo_neutro"][:60] for ev in pubblicati
+               if any(_copiato(ev.get("titolo_neutro"), a.get("titolo")) for a in ev["articoli"])]
+    if copiati:
+        allarmi.append("titolo grande uguale a quello di una testata: %s" % "; ".join(copiati[:5]))
     sport = [ev["titolo_neutro"][:60] for ev in pubblicati if ev.get("tema") == "sport"]
     if sport:
         allarmi.append("sport pubblicato: %s" % "; ".join(sport))

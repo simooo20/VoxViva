@@ -370,7 +370,7 @@ SCHEMA_ANALIZZA = {
                         "divergenza": {
                             "type": "string",
                             "enum": ["bassa", "media", "alta"],
-                            "description": "bassa = i titoli raccontano il fatto quasi allo stesso modo. media = cambiano enfasi, cosa mettono in prima posizione, cosa omettono. alta = cambia chi è il protagonista, chi ha la colpa, oppure il fatto stesso sembra un altro.",
+                            "description": "bassa = i titoli raccontano il fatto quasi allo stesso modo, nessuna parola carica. media = cambiano enfasi, cosa mettono in prima posizione, cosa omettono. alta = uno dei titoli cambia il protagonista o la colpa, OPPURE introduce un'inquadratura ideologica assente negli altri: dettagli di nazionalita'/origine/religione, un bersaglio politico (governo, opposizione, UE, sindacati), parole cariche di giudizio («terrore», «vergogna», «schiaffo», «regime», «invasione»), un'accusa. Esempio: ANSA «Aggredisce donna e investe due persone» contro Il Giornale «Terrore a Reggio Emilia, 26enne di origini egiziane...» = ALTA. Non livellare verso il basso: descrivi la differenza che c'e' davvero, senza inventarla.",
                         },
                         "duello": {
                             "type": "string",
@@ -715,6 +715,7 @@ Il tuo compito: per ogni notizia, indica quali TITOLI raccontano ESATTAMENTE que
 - **Stesso fatto.** Il titolo parla dello stesso episodio, non dello stesso argomento. «Garofano sentito in procura» e «La difesa di Sempio attende le nuove prove» sono entrambi su Garlasco ma sono fatti diversi. «Eni mette un tetto ai prezzi» e «I viaggi in Africa di Meloni con Descalzi» sono fatti diversi.
 - **Stesso stadio della vicenda.** Se la notizia è «Trump respinge la proposta dell'Iran», un titolo che racconta ancora solo «l'Iran propone una tregua» (senza il no) NON va abbinato: è il momento prima. Guarda l'ora: titoli di molte ore prima della notizia sono i primi sospettati.
 - **Parole diverse vanno bene.** Lo stesso fatto titolato con parole opposte o cariche («Trump gela l'Iran» / «no di Trump alla tregua») VA abbinato: è proprio il confronto che serve. Anche un commento o un retroscena su quel fatto va bene.
+- **I titoli carichi e di parte sono i PIU' preziosi.** Il sito vive di confronto: il titolo urlato di un giornale di destra o di sinistra, il commento, l'editoriale, il retroscena polemico sullo STESSO fatto vanno SEMPRE abbinati, anche se usano parole cariche («terrore», «vergogna», «schiaffo»), aggiungono dettagli (nazionalita', colpe, bersagli politici) o sono scritti come opinione. Per ogni notizia cerca attivamente anche le versioni di Il Manifesto, Il Fatto, Domani, Repubblica, Open, HuffPost, Fanpage da un lato e di La Verita', Libero, Il Giornale, Il Tempo, Il Foglio, Secolo d'Italia, Il Primato dall'altro. Ne servono PIU' d'una per lato, se ci sono.
 - Ogni titolo va al massimo in UNA notizia. La maggior parte dei titoli non corrisponde a nessuna notizia: è normale, lasciali fuori.
 
 Riporta una voce per OGNI notizia (anche con ids vuoto), con il tema.
@@ -1095,8 +1096,81 @@ def analizza(client, eventi, quanti, ampiezza_minima=2):
                 raise
             except Exception as exc:
                 print("  analisi di un blocco fallita: %s" % str(exc)[:150])
+    riscrivi_titoli_copiati(client, eventi, idx)
     senza = sum(1 for i in idx if not eventi[i].get("nota"))
     print("  analisi: %d confronti pubblicabili, %d senza nota" % (len(idx), senza))
+
+
+SCHEMA_TITOLI = {
+    "name": "registra_titoli",
+    "description": "Registra un titolo neutro nuovo per ogni confronto.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "titoli": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "evento": {"type": "integer"},
+                        "titolo": {"type": "string"},
+                    },
+                    "required": ["evento", "titolo"],
+                },
+            }
+        },
+        "required": ["titoli"],
+    },
+}
+
+PROMPT_TITOLI = """Per ogni confronto qui sotto il titolo grande in cima e' risultato IDENTICO (o quasi) al titolo di una delle testate mostrate sotto. Non va bene: il titolo grande deve essere una sintesi NOSTRA, scritta con parole diverse da tutti i titoli.
+
+Per ogni confronto scrivi un titolo nuovo:
+- descrive il fatto comune ai tre titoli (chi, cosa, dove), in modo asciutto e neutro;
+- massimo 90 caratteri, nessun aggettivo valutativo, nessuna virgoletta di dichiarazione;
+- NON riusare la struttura della frase ne' l'ordine delle parole di nessuno dei titoli: cambia soggetto o costruzione (es. "Ubriaco alla guida, travolge un operaio sulla A14" -> "A14, operaio ucciso in un cantiere: arrestato il conducente").
+
+{blocchi}
+
+Chiama registra_titoli."""
+
+
+def _titolo_copiato_da(ev):
+    return any(_titolo_copiato(ev.get("titolo_neutro", ""), a.get("titolo", ""))
+               for a in ev["articoli"])
+
+
+def riscrivi_titoli_copiati(client, eventi, idx):
+    """Rete di sicurezza del 28/9: il titolo grande usciva a volte identico al
+    lancio ANSA (il modello ricopiava, e il controllo anti-copia teneva il
+    vecchio titolo, anch'esso copiato). Qui si chiede una riscrittura mirata,
+    fino a due volte, solo per i confronti ancora copiati."""
+    for giro in (1, 2):
+        copiati = [i for i in idx if _titolo_copiato_da(eventi[i])]
+        if not copiati:
+            return
+        blocchi = []
+        for n, i in enumerate(copiati, 1):
+            ev = eventi[i]
+            righe = ["Confronto %d - titolo grande attuale: %s" % (n, ev["titolo_neutro"])]
+            for a in ordina_da_sinistra([x for x in ev["articoli"] if x.get("area") in AREE])[:6]:
+                righe.append('  [%s] "%s"' % (a["fonte"], a["titolo"]))
+            blocchi.append("\n".join(righe))
+        try:
+            dati, uso = chiama(client, PROMPT_TITOLI.format(blocchi="\n\n".join(blocchi)), SCHEMA_TITOLI)
+        except BudgetEsaurito:
+            raise
+        except Exception as exc:
+            print("  riscrittura titoli fallita: %s" % str(exc)[:120])
+            return
+        for voce in dati.get("titoli", []):
+            n = voce.get("evento", 0)
+            nuovo = (voce.get("titolo") or "").strip()
+            if isinstance(n, int) and 1 <= n <= len(copiati) and nuovo:
+                ev = eventi[copiati[n - 1]]
+                if not any(_titolo_copiato(nuovo, a.get("titolo", "")) for a in ev["articoli"]):
+                    ev["titolo_neutro"] = nuovo
+        print("  titoli grandi copiati riscritti (giro %d): %d" % (giro, len(copiati)))
 
 
 def _analizza_blocco(client, eventi, candidati):
