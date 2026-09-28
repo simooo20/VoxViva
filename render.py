@@ -716,7 +716,39 @@ def main():
         return sum(1 for k in ("sinistra", "centro", "destra") if ev["per_colonna"].get(k))
     con_colonna = {k: sum(1 for ev in eventi if ev["per_colonna"].get(k))
                    for k in ("sinistra", "centro", "destra")}
+    # CONTROLLO QUALITA' AUTOMATICO: ogni giro verifica le cose che si sono
+    # gia' rotte almeno una volta. Se qualcosa non va, finisce in stato.json
+    # ("allarmi") e il workflow apre/aggiorna una segnalazione su GitHub, cosi'
+    # un problema non resta online per giorni senza che nessuno se ne accorga.
+    pubblicati = principali + altri
+    allarmi = []
+    if len(pubblicati) < 8:
+        allarmi.append("solo %d confronti pubblicati (minimo atteso 8)" % len(pubblicati))
+    senza_analisi = [ev["titolo_neutro"][:60] for ev in pubblicati
+                     if not ev.get("divergenza") or not ev.get("nota")]
+    if senza_analisi:
+        allarmi.append("%d confronti senza divergenza/nota: %s"
+                       % (len(senza_analisi), "; ".join(senza_analisi[:5])))
+    sport = [ev["titolo_neutro"][:60] for ev in pubblicati if ev.get("tema") == "sport"]
+    if sport:
+        allarmi.append("sport pubblicato: %s" % "; ".join(sport))
+    lontani = []
+    for ev in pubblicati:
+        ore = []
+        for art in rappresentanti(ev):
+            try:
+                ore.append(datetime.fromisoformat(art["pubblicato"].replace("Z", "+00:00")))
+            except Exception:
+                pass
+        if len(ore) > 1 and (max(ore) - min(ore)).total_seconds() > 6 * 3600:
+            lontani.append(ev["titolo_neutro"][:60])
+    if lontani:
+        allarmi.append("titoli in colonna a piu' di 6 ore l'uno dall'altro: %s" % "; ".join(lontani[:5]))
+    for x in allarmi:
+        print("  ALLARME QUALITA': %s" % x)
+
     stato = {
+        "allarmi": allarmi,
         "generato": d.get("generato"),
         "modello": d.get("modello"),
         "titoli_letti": d.get("totale_articoli", 0),

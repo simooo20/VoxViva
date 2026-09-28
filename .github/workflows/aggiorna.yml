@@ -19,6 +19,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write     # per la segnalazione automatica dei problemi di qualita'
+
 
 # se parte un nuovo giro mentre il precedente non ha finito, l'ultimo vince
 concurrency:
@@ -61,6 +63,32 @@ jobs:
           python ingest.py --ore 24
           python cluster.py
           python render.py --max 15
+
+      # Controllo qualita': se render.py ha trovato problemi (confronti senza
+      # divergenza, pochi confronti, sport, titoli di ore diverse) apre o
+      # aggiorna la segnalazione "Controllo qualita' VoxViva" su GitHub: arriva
+      # per email. Non blocca mai la pubblicazione.
+      - name: Segnala problemi di qualita'
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY' > allarmi.txt
+          import json
+          try:
+              a = json.load(open("web/stato.json")).get("allarmi") or []
+          except Exception as e:
+              a = ["stato.json non leggibile: %s" % e]
+          if a: print("\n".join("- " + x for x in a))
+          PY
+          if [ -s allarmi.txt ]; then
+            N=$(gh issue list --state open --search "Controllo qualita VoxViva in:title" --json number -q '.[0].number')
+            TESTO="$(date -u '+%Y-%m-%d %H:%M UTC') - giro ${{ github.run_number }}"$'\n\n'"$(cat allarmi.txt)"
+            if [ -n "$N" ]; then gh issue comment "$N" --body "$TESTO"; else gh issue create --title "Controllo qualita VoxViva" --body "$TESTO"; fi
+          else
+            echo "Nessun problema di qualita'."
+          fi
 
       - name: Configura Pages
         uses: actions/configure-pages@v5

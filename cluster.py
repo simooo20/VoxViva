@@ -1063,21 +1063,43 @@ def arricchisci(eventi):
 
 
 def analizza(client, eventi, quanti, ampiezza_minima=2):
-    # analizza gli eventi principali (sempre, sono la cima del sito) piu' quelli
-    # con estremi distanti. Cosi' ogni evento in vetta ha la sua nota.
-    # prima quelli che verranno PUBBLICATI (tre colonne piene): sono quelli
-    # che hanno bisogno del titolo grande riscritto e della nota.
+    """Divergenza, duello, nota e titolo grande per i confronti PUBBLICABILI.
+
+    Lezione del 27/9: prima si analizzavano i primi 22 eventi ordinati per
+    distanza fra gli estremi, e dopo la regola delle 5 ore in cima c'erano
+    eventi a DUE colonne (che non si pubblicano): i confronti pubblicati
+    uscivano tutti senza divergenza e senza nota. Ora si analizzano SOLO gli
+    eventi con tre colonne piene (gli unici che escono), a blocchi da 12, e chi
+    resta senza analisi viene riprovato una volta."""
     def _pieno(ev):
         return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
-    candidati = [(i, ev) for i, ev in enumerate(eventi)
-                 if ev.get("tema") not in TEMI_ESCLUSI
-                 and (ev.get("principale") or ev["ampiezza"] >= ampiezza_minima)]
-    candidati.sort(key=lambda x: not _pieno(x[1]))
-    candidati = candidati[:quanti]
-    if not candidati:
-        print("  passo 2 saltato: nessun evento con estremi abbastanza distanti")
+    idx = [i for i, ev in enumerate(eventi)
+           if ev.get("tema") not in TEMI_ESCLUSI and _pieno(ev)]
+    idx.sort(key=lambda i: (not eventi[i].get("principale"),
+                            eventi[i].get("ordine_agenzia", 999)))
+    idx = idx[:max(quanti, 1)]
+    if not idx:
+        print("  passo 2 saltato: nessun confronto a tre colonne")
         return
+    for giro in (1, 2):
+        mancano = [i for i in idx if not eventi[i].get("nota")]
+        if not mancano:
+            break
+        if giro == 2:
+            print("  analisi: riprovo %d confronti rimasti senza nota" % len(mancano))
+        for k in range(0, len(mancano), 12):
+            blocco = [(i, eventi[i]) for i in mancano[k:k + 12]]
+            try:
+                _analizza_blocco(client, eventi, blocco)
+            except BudgetEsaurito:
+                raise
+            except Exception as exc:
+                print("  analisi di un blocco fallita: %s" % str(exc)[:150])
+    senza = sum(1 for i in idx if not eventi[i].get("nota"))
+    print("  analisi: %d confronti pubblicabili, %d senza nota" % (len(idx), senza))
 
+
+def _analizza_blocco(client, eventi, candidati):
     # Leggiamo un pezzo di ogni articolo (og:description + primi paragrafi) per
     # poter confrontare non solo il titolo ma il RACCONTO: tono, parole scelte,
     # cosa mette in evidenza il pezzo. Il testo non viene mai pubblicato, serve
@@ -1145,7 +1167,7 @@ def main():
     ap.add_argument("--no-verifica", action="store_true",
                     help="salta il controllo che caccia gli intrusi dai gruppi (sconsigliato)")
     ap.add_argument("--no-analisi", action="store_true", help="salta il passo 2")
-    ap.add_argument("--analizza", type=int, default=30, help="quanti eventi analizzare (serve la divergenza per ordinarli)")
+    ap.add_argument("--analizza", type=int, default=40, help="quanti eventi analizzare (serve la divergenza per ordinarli)")
     args = ap.parse_args()
 
     if not IN.exists():
