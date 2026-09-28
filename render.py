@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from scala import lati_mostrati
 from scala import (AGGREGATORE, AREE, BREVI, COLONNE, INDICE, NOMI,
                    allarme, ordina_da_sinistra, piu_allarmante, coppia_divergente)
 
@@ -413,7 +414,7 @@ def rappresentanti(ev):
     sin = ev["per_colonna"].get("sinistra", [])
     cen = ev["per_colonna"].get("centro", [])
     des = ev["per_colonna"].get("destra", [])
-    sx, dx = coppia_divergente(sin, des)
+    sx, dx = lati_mostrati(ev)
     rif = ev.get("riferimento") or (cen[0] if cen else None)
     return sx, rif, dx
 

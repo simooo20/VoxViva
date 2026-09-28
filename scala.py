@@ -199,6 +199,20 @@ def divergenza(a, b):
     return 1.0 - len(pa & pb) / len(pa | pb)
 
 
+def lati_mostrati(ev):
+    """I titoli di sinistra e di destra da mostrare in pagina. Se il controllo
+    finale (cluster.controlla_trio) ha scelto il titolo piu' di parte di ogni
+    lato, vale quella scelta (ev["scelta"] = {"sinistra": id, "destra": id});
+    altrimenti si torna alla coppia divergente calcolata sulle parole."""
+    sin = ev["per_colonna"].get("sinistra", [])
+    des = ev["per_colonna"].get("destra", [])
+    sx, dx = coppia_divergente(sin, des)
+    scelta = ev.get("scelta") or {}
+    sx = next((a for a in sin if a.get("id") == scelta.get("sinistra")), sx)
+    dx = next((a for a in des if a.get("id") == scelta.get("destra")), dx)
+    return sx, dx
+
+
 def coppia_divergente(sinistra, destra, k=6):
     """Sceglie la COPPIA (sinistra, destra) che stride di piu'. Prima si tengono
     i k titoli piu' carichi per lato (garanzia: entrambi forti), poi fra questi
@@ -270,7 +284,8 @@ def riferimento_centro(articoli):
     if len(centrali) <= 2:                      # troppo pochi per un outlier: resta l'asciutto
         agenzie = [a for a in centrali if a.get("dominio", "") in AGENZIE]
         pool = agenzie or centrali
-        scelta = min(pool, key=lambda a: len(a.get("titolo", "")))
+        scelta = min(pool, key=lambda a: (allarme(a.get("titolo", "")) + 1.5 * sum(a.get("titolo", "").count(c) for c in '«"“'),
+                                          len(a.get("titolo", ""))))
         return dict(scelta, agenzia=bool(agenzie))
 
     rappr = {id(a): _rappresentativita(a, centrali) for a in centrali}
@@ -278,5 +293,13 @@ def riferimento_centro(articoli):
     if agenzie:
         scelta = max(agenzie, key=lambda a: (rappr[id(a)], -len(a.get("titolo", ""))))
         return dict(scelta, agenzia=True)
-    scelta = max(centrali, key=lambda a: (rappr[id(a)], -len(a.get("titolo", ""))))
+    # senza agenzia: il titolo di centro piu' ASCIUTTO (Simone, 28/9: al centro
+    # "Formichetti e' come satana" del Messaggero non ci deve stare). Meno
+    # allarme e niente virgolette di dichiarazione vincono; a parita', il piu'
+    # rappresentativo.
+    def _calma(a):
+        t = a.get("titolo", "")
+        virg = sum(t.count(c) for c in '«"“')
+        return allarme(t) + 1.5 * virg
+    scelta = min(centrali, key=lambda a: (_calma(a), -rappr[id(a)], len(a.get("titolo", ""))))
     return dict(scelta, agenzia=False)

@@ -189,3 +189,33 @@ def stesso_titolo(a, b):
     if x == y or x.startswith(y[:45]) or y.startswith(x[:45]):
         return True
     return difflib.SequenceMatcher(None, x, y).ratio() >= 0.78
+
+
+def cerca(query, ore=36, log=print):
+    """Ricerca Google News su UNA notizia: tutte le versioni delle testate, anche
+    quelle che nei loro feed RSS non compaiono (28/9: il «Piantedosi: imbarcato
+    sul primo volo» di Libero non era nel feed di Libero, ma qui si'). Ritorna
+    [{titolo, fonte_google, url_fonte, link, pubblicato}]. Mai eccezioni."""
+    from urllib.parse import quote
+    url = "https://news.google.com/rss/search?q=%s&%s" % (
+        quote("%s when:%dh" % (query, ore)), LINGUA)
+    try:
+        xml = _scarica(url)
+    except Exception as exc:
+        log("    ricerca '%s' fallita: %s" % (query, str(exc)[:60]))
+        return []
+    out = []
+    for v in xml.split("<item>")[1:]:
+        m = re.search(r"<title>(.*?)</title>", v, re.S)
+        src = re.search(r'<source url="([^"]*)">(.*?)</source>', v)
+        dt = _data((re.search(r"<pubDate>(.*?)</pubDate>", v) or [None, ""])[1])
+        if not m or not src or dt is None:
+            continue
+        out.append({
+            "titolo": _via_suffisso(html.unescape(m.group(1))),
+            "fonte_google": html.unescape(src.group(2)).strip(),
+            "url_fonte": src.group(1),
+            "link": (re.search(r"<link>(.*?)</link>", v) or [None, ""])[1].strip(),
+            "pubblicato": dt.isoformat(),
+        })
+    return out

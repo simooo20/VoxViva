@@ -27,7 +27,7 @@ import os
 import re
 from pathlib import Path
 
-from scala import coppia_divergente, divergenza
+from scala import coppia_divergente, divergenza, lati_mostrati
 
 BASE = Path(__file__).resolve().parent
 IN = BASE / "data" / "events.json"
@@ -88,7 +88,7 @@ def rappresentanti(ev):
     sin = ev["per_colonna"].get("sinistra", [])
     cen = ev["per_colonna"].get("centro", [])
     des = ev["per_colonna"].get("destra", [])
-    sx, dx = coppia_divergente(sin, des)
+    sx, dx = lati_mostrati(ev)
     rif = ev.get("riferimento") or (cen[0] if cen else None)
     return sx, rif, dx
 

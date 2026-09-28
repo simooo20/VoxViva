@@ -342,7 +342,7 @@ def titoli_da_google_news(dominio, taglio, limite=40):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ore", type=int, default=24, help="finestra temporale in ore (default 24)")
-    ap.add_argument("--max-per-feed", type=int, default=40)
+    ap.add_argument("--max-per-feed", type=int, default=80)
     args = ap.parse_args()
 
     cfg = json.loads(SOURCES.read_text(encoding="utf-8"))

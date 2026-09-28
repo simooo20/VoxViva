@@ -32,7 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from scala import allarme
+from scala import allarme, lati_mostrati
 from scala import (AGGREGATORE, AREE, BREVI, COLONNA_DI, COLONNE, NOMI,
                    coppia_divergente, estremi, ordina_da_sinistra,
                    riferimento_centro)
@@ -77,6 +77,9 @@ def leggi_incipit(url, max_chars=700):
 OUT = BASE / "data" / "events.json"
 
 ROMA = ZoneInfo("Europe/Rome")
+from scala import AGENZIE as AGENZIE_CENTRO
+import re as _re_sport
+RUMORE_SPORT = _re_sport.compile(r"\b(serie a|champions|gol|calciomercato|nations league|formula 1|motogp)\b", _re_sport.I)
 
 # FINESTRA TEMPORALE DEL CONFRONTO (regola di Simone, 26 set 2026): i titoli
 # messi a confronto devono essere stati scritti nelle STESSE ore. Se fra il
@@ -373,7 +376,7 @@ SCHEMA_ANALIZZA = {
                         "evento": {"type": "integer", "description": "Il numero dell'evento come indicato nell'elenco."},
                         "titolo": {
                             "type": "string",
-                            "description": "La riga grande in cima al confronto: una sintesi neutra, con parole TUE, del fatto che raccontano i TRE titoli in colonna (non altri momenti della vicenda). Deve essere coerente con tutti e tre e DIVERSA da ognuno di loro, in particolare dal titolo di centro. Massimo 90 caratteri, nessun aggettivo valutativo.",
+                            "description": "La riga grande in cima al confronto: SOLO L'ARGOMENTO, ridotto al minimo, 2-6 parole, massimo 45 caratteri (es. 'Omicidio a Torino', 'Espulso il trapper Bratan', 'Suppletive in Calabria', 'Tetto ai prezzi dei carburanti'). Niente dettagli, niente nomi secondari, niente giudizi: i dettagli li danno i titoli sotto, a partire da quello asciutto del centro. Deve essere diverso da tutti i titoli mostrati.",
                         },
                         "divergenza": {
                             "type": "string",
@@ -703,8 +706,12 @@ SCHEMA_ABBINA = {
                             "items": {"type": "string"},
                             "description": "I numeri dei nostri titoli che raccontano LO STESSO fatto allo STESSO stadio. Lista vuota se nessuno.",
                         },
+                        "cerca": {
+                            "type": "string",
+                            "description": "2-4 parole chiave per cercare QUESTA notizia su Google News: nomi propri, luoghi, la parola del fatto (es. 'Bratan Milano-Meda', 'Fairford base Raf arresti'). Niente parole generiche.",
+                        },
                     },
-                    "required": ["notizia", "tema", "ids"],
+                    "required": ["notizia", "tema", "ids", "cerca"],
                 },
             }
         },
@@ -869,6 +876,7 @@ def raggruppa_da_google(client, articoli, storie, ore):
             continue
         ev = eventi[n - 1]
         ev["tema"] = voce.get("tema", "altro")
+        ev["cerca"] = (voce.get("cerca") or "").strip()
         for k in voce.get("ids") or []:
             k = str(k)
             if k in per_key and k not in usati:
@@ -886,6 +894,53 @@ def raggruppa_da_google(client, articoli, storie, ore):
                            "tema": "altro", "articoli": [a]})
     print("  storie Google: %d | titoli dal nucleo: %d | abbinati dal modello: %d"
           % (len(storie), nel_nucleo, aggiunti))
+    return eventi
+
+
+MAX_RICERCHE = int(os.environ.get("ILVAGLIO_MAX_RICERCHE", "45"))
+
+
+def ricerca_mirata(eventi, articoli):
+    """Per ogni notizia candidata cerca su Google News TUTTE le versioni delle
+    nostre testate (28/9, caso Bratan: il titolo strillato di Libero non era
+    nel feed di Libero, ma la ricerca lo trova, insieme a Secolo, Adnkronos e
+    al Fanpage con l'avvocato). I titoli trovati entrano nel gruppo e passano
+    poi da verifica(), finestra oraria e controlla_trio() come tutti gli altri.
+    Solo HTTP, zero token."""
+    import hashlib
+    import time as _t
+    import gnews
+    fonti = json.loads((BASE / "sources.json").read_text(encoding="utf-8"))["sources"]
+    testate = gnews.Testate(fonti)
+    gia_url = {a.get("url") for a in articoli}
+    cand = [ev for ev in eventi if ev.get("cerca") and ev.get("tema") not in TEMI_ESCLUSI
+            and len([a for a in ev["articoli"] if a.get("area") in AREE]) >= 2]
+    cand.sort(key=lambda ev: (ev.get("ordine_google") is None, ev.get("ordine_google") or 0,
+                              -len(ev["articoli"])))
+    cand = cand[:MAX_RICERCHE]
+    aggiunti = 0
+    for ev in cand:
+        for r in gnews.cerca(ev["cerca"]):
+            chi = testate.riconosci(r["fonte_google"], r["url_fonte"])
+            if not chi or r["link"] in gia_url:
+                continue
+            nome, area = chi
+            if any(a["fonte"] == nome and gnews.stesso_titolo(a["titolo"], r["titolo"]) for a in ev["articoli"]):
+                continue
+            if RUMORE_SPORT.search(r["titolo"]):
+                continue
+            ev["articoli"].append({
+                "id": hashlib.sha1(r["link"].encode()).hexdigest()[:10],
+                "titolo": r["titolo"], "url": r["link"], "pubblicato": r["pubblicato"],
+                "fonte": nome, "feed": nome + " (google news, ricerca)",
+                "dominio": gnews.dominio(r["url_fonte"]), "area": area,
+                "primaria": False, "ordine_feed": 0, "immagine": None, "da_ricerca": True,
+            })
+            gia_url.add(r["link"])
+            aggiunti += 1
+        _t.sleep(0.4)
+    print("  ricerca mirata su Google News: %d notizie, %d titoli nuovi dalle nostre testate"
+          % (len(cand), aggiunti))
     return eventi
 
 
@@ -1071,6 +1126,11 @@ def arricchisci(eventi):
         ev["estremo_destro"] = destro
         ev["ampiezza"] = distanza          # quante caselle della scala separano gli estremi
         ev["riferimento"] = riferimento_centro(ev["articoli"])
+        scelto_c = (ev.get("scelta") or {}).get("centro")
+        if scelto_c:
+            a_c = next((a for a in ev["articoli"] if a.get("id") == scelto_c and a.get("area") == "C"), None)
+            if a_c is not None:
+                ev["riferimento"] = dict(a_c, agenzia=a_c.get("dominio", "") in AGENZIE_CENTRO)
         ev["totale"] = len(reali)          # conta le testate con una linea, non l'aggregatore
         ev["ultimo"] = max(a["pubblicato"] for a in ev["articoli"])
         ev["testate"] = sorted({a["fonte"] for a in reali})
@@ -1100,8 +1160,11 @@ SCHEMA_TRIO = {
                         "fuori": {"type": "array", "items": {"type": "string"},
                                   "description": "Le sigle (es. 3-2) dei titoli che raccontano un ALTRO fatto. Vuota se sono tutti lo stesso fatto."},
                         "motivo": {"type": "string"},
+                        "sinistra": {"type": "string", "description": "Sigla del titolo di SINISTRA (tra quelli rimasti) piu' di parte e strillato."},
+                        "centro": {"type": "string", "description": "Sigla del titolo di CENTRO (tra quelli rimasti) piu' asciutto e neutro, preferibilmente d'agenzia."},
+                        "destra": {"type": "string", "description": "Sigla del titolo di DESTRA (tra quelli rimasti) piu' di parte e strillato."},
                     },
-                    "required": ["confronto", "fatto", "fuori", "motivo"],
+                    "required": ["confronto", "fatto", "fuori", "motivo", "sinistra", "centro", "destra"],
                 },
             }
         },
@@ -1123,6 +1186,10 @@ NON e' fuori — e anzi e' il titolo piu' prezioso — un titolo che racconta lo
 - indicando una causa, una pista o un responsabile (la «pista iraniana» sull'allarme alla base RAF; «colpa di Vannacci» sul calo dell'affluenza = stesso fatto);
 - con MENO dettagli degli altri (un titolo che non cita la causa non e' un altro fatto).
 E' fuori SOLO se racconta un EVENTO diverso: un'altra dichiarazione di un'altra persona, un altro episodio, un'altra storia (es. il ritratto della contadina che diede l'allarme), un altro momento della vicenda. Nel dubbio, NON togliere.
+
+POI, tra i titoli rimasti, scegli i tre da mettere IN PAGINA (una sigla per colonna; la colonna di ogni titolo e' indicata fra parentesi quadre):
+- SINISTRA e DESTRA: il titolo piu' DI PARTE e STRILLATO di quel lato, quello che un lettore di quell'area riconoscerebbe come "suo": parole cariche, una citazione forte di un politico («Piantedosi: imbarcato sul primo volo»), un attacco, un bersaglio politico, dettagli di origine, un'accusa, un'ironia. A parita', preferisci la testata piu' estrema (sinistra radicale / destra radicale). Un titolo asciutto da cronaca va scelto SOLO se quel lato non ha altro.
+- CENTRO: il titolo piu' ASCIUTTO e fattuale, meglio se d'agenzia (ANSA, AGI, LaPresse, Adnkronos, Italpress, Askanews, Dire). Mai un titolo con citazioni sensazionali, virgolette ad effetto o parole cariche, se ce n'e' uno piu' neutro.
 
 {confronti}
 
@@ -1146,8 +1213,7 @@ def controlla_trio(client, eventi, giri=2):
             return eventi
         per_key, blocchi = {}, []
         for n, ev in enumerate(cand, 1):
-            sx, dx = coppia_divergente(ev["per_colonna"].get("sinistra", []),
-                                       ev["per_colonna"].get("destra", []))
+            sx, dx = lati_mostrati(ev)
             in_pagina = {id(x): col for x, col in ((sx, "sinistra"), (ev.get("riferimento"), "centro"), (dx, "destra")) if x}
             righe = ["Confronto %d" % n]
             for k, a in enumerate(ordina_da_sinistra([x for x in ev["articoli"] if x.get("area") in AREE]), 1):
@@ -1155,8 +1221,9 @@ def controlla_trio(client, eventi, giri=2):
                 per_key[sigla] = (ev, a)
                 marca = next((c for x, c in in_pagina.items() if x == id(a) or
                               (c == "centro" and ev.get("riferimento", {}).get("id") == a.get("id"))), None)
-                righe.append('  %s [%s, %s]%s "%s"' % (sigla, a["fonte"], _ora_breve(a.get("pubblicato", "")),
-                                                      " IN PAGINA (%s)" % marca if marca else "", a["titolo"]))
+                righe.append('  %s [%s, %s, %s]%s "%s"' % (sigla, COLONNA_DI.get(a.get("area"), "?"), a["fonte"],
+                                                          _ora_breve(a.get("pubblicato", "")),
+                                                          " ora in pagina" if marca else "", a["titolo"]))
             blocchi.append("\n".join(righe))
         try:
             dati, uso = chiama(client, PROMPT_TRIO.format(confronti="\n\n".join(blocchi)), SCHEMA_TRIO,
@@ -1170,6 +1237,11 @@ def controlla_trio(client, eventi, giri=2):
         for voce in dati.get("controlli", []):
             if not isinstance(voce, dict):
                 continue
+            # la scelta dei titoli da mostrare (vale se il titolo resta nel gruppo)
+            for col in ("sinistra", "centro", "destra"):
+                ev_a = per_key.get(str(voce.get(col) or "").strip())
+                if ev_a and COLONNA_DI.get(ev_a[1].get("area")) == col:
+                    ev_a[0].setdefault("scelta", {})[col] = ev_a[1].get("id")
             for sigla in voce.get("fuori") or []:
                 ev_a = per_key.get(str(sigla).strip())
                 if not ev_a:
@@ -1185,9 +1257,9 @@ def controlla_trio(client, eventi, giri=2):
                 print("    tolto %s (%s) - %s" % (sigla, a["fonte"], (voce.get("motivo") or "")[:90]))
         print("  controllo finale dei titoli (giro %d): %d confronti, %d titoli tolti"
               % (giro, len(cand), tolti))
+        eventi = arricchisci(eventi)       # applica anche la scelta dei titoli da mostrare
         if not tolti:
             return eventi
-        eventi = arricchisci(eventi)
         da_controllare = cambiati
     return eventi
 
@@ -1255,9 +1327,9 @@ SCHEMA_TITOLI = {
 PROMPT_TITOLI = """Per ogni confronto qui sotto il titolo grande in cima e' risultato IDENTICO (o quasi) al titolo di una delle testate mostrate sotto. Non va bene: il titolo grande deve essere una sintesi NOSTRA, scritta con parole diverse da tutti i titoli.
 
 Per ogni confronto scrivi un titolo nuovo:
-- descrive il fatto comune ai tre titoli (chi, cosa, dove), in modo asciutto e neutro;
-- massimo 90 caratteri, nessun aggettivo valutativo, nessuna virgoletta di dichiarazione;
-- NON riusare la struttura della frase ne' l'ordine delle parole di nessuno dei titoli: cambia soggetto o costruzione (es. "Ubriaco alla guida, travolge un operaio sulla A14" -> "A14, operaio ucciso in un cantiere: arrestato il conducente").
+- dice SOLO l'argomento, ridotto al minimo: 2-6 parole, massimo 45 caratteri (es. "Omicidio a Torino", "Espulso il trapper Bratan");
+- nessun dettaglio, nessun aggettivo valutativo, nessuna virgoletta;
+- NON riusare la frase di nessuno dei titoli (es. "Ubriaco alla guida, travolge un operaio sulla A14" -> "Operaio ucciso sulla A14").
 
 {blocchi}
 
@@ -1319,8 +1391,7 @@ def _analizza_blocco(client, eventi, candidati):
         # I TRE titoli che finiranno DAVVERO in colonna (gli stessi che sceglie
         # render.py): la nota va costruita su questi, non su un titolo qualunque
         # del mucchio, o descrive una colonna e il sito ne mostra un'altra.
-        sx, dx = coppia_divergente(ev["per_colonna"].get("sinistra", []),
-                                   ev["per_colonna"].get("destra", []))
+        sx, dx = lati_mostrati(ev)
         rif = ev.get("riferimento")
         mostrati = {}
         for art, col in ((sx, "sinistra"), (rif, "centro"), (dx, "destra")):
@@ -1408,6 +1479,10 @@ def main():
         try:
             eventi = raggruppa_da_google(client, articoli, storie, dati.get("finestra_ore", 24))
             MODO["raggruppamento"] = "google"
+            try:
+                eventi = ricerca_mirata(eventi, articoli)
+            except Exception as exc:
+                print("  ricerca mirata saltata: %s" % str(exc)[:120])
         except BudgetEsaurito as exc:
             sys.exit("Raggruppamento fermato dal tetto di spesa (%s). "
                      "Salto il giro; resta online l'ultima versione pubblicata." % exc)
