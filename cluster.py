@@ -1354,7 +1354,13 @@ def _analizza_blocco(client, eventi, candidati):
     dati, uso = chiama(client, prompt, SCHEMA_ANALIZZA)
     print("  passo 2 analisi: %d token in, %d out" % (uso.input_tokens, uso.output_tokens))
 
-    for voce in dati.get("analisi", []):
+    analisi = dati.get("analisi", [])
+    if isinstance(analisi, str):          # a volte il modello rimanda la lista come testo JSON
+        try:
+            analisi = json.loads(analisi)
+        except Exception:
+            analisi = []
+    for voce in analisi:
         if not isinstance(voce, dict):
             continue                     # risposta malformata del modello (visto il 28/9)
         n = voce.get("evento", 0)
