@@ -132,7 +132,11 @@ a:hover{color:var(--accent)}
 /* ---------- testata ---------- */
 header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22px 0 16px}
 .brand{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
-.brand h1{font-family:var(--display);font-weight:700;font-size:46px;line-height:.95;margin:0;letter-spacing:-.035em}
+/* logo di Simone (28/9): "vox" nerissimo + "viva" sottile, Montserrat, minuscolo */
+.brand h1{font-family:"Montserrat",var(--display);font-size:48px;line-height:.95;margin:0;
+  color:#212121;letter-spacing:-.01em;text-transform:lowercase}
+.brand h1 .vox{font-weight:900;letter-spacing:-.02em}
+.brand h1 .viva{font-weight:300;margin-left:.08em}
 .brand .tag{font-size:14px;color:var(--ink-3)}
 .claim{font-family:var(--serif);font-size:16px;line-height:1.35;color:var(--ink-2);
   margin:10px 0 0;max-width:60ch}
@@ -645,7 +649,7 @@ def main():
 <meta name="description" content="Come la stessa notizia italiana viene titolata dalla sinistra radicale alla destra radicale. Aggiornato ogni giorno.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@300;900&display=swap" rel="stylesheet">
 %(ga)s%(adsense)s<style>%(css)s</style>
 </head>
 <body>
@@ -653,7 +657,7 @@ def main():
 %(leaderboard)s
 <header class="top"><div class="wrap">
   <div class="brand">
-    <h1>VoxViva</h1>
+    <h1 aria-label="VoxViva"><span class="vox">vox</span><span class="viva">viva</span></h1>
     <span class="tag">la stessa notizia, da un estremo all'altro</span>
   </div>
   <p class="claim">Quasi nessuno legge gli articoli: si leggono i titoli. Qui ogni notizia
