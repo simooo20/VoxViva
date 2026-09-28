@@ -142,6 +142,9 @@ def allarme(titolo: str) -> float:
     # dell'inquadratura di parte (ANSA "aggredisce una donna" vs "26enne di
     # origini egiziane"). Contano come una parola carica.
     lex += sum(1 for w in parole if _IDENTITA.match(w))
+    # una frase secca di un politico/autorita' tra virgolette dopo i due punti
+    # ("Piantedosi: «Imbarcato sul primo volo»") e' la cifra del titolo strillato
+    lex += len(_re.findall(r"[A-Z][\w'’]+\s*:\s*[«\"“]", t))
     esclam = low.count("!") + low.count("?")
     virgolette = t.count("«") + t.count("“") + t.count("\"") + (1 if "'" in t and '"' not in t else 0)
     maiusc = len([m for m in _MAIUSC.findall(t) if len(m) >= 4])   # REPORTOPOLI, SHOCK

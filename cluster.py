@@ -88,13 +88,13 @@ RUMORE_SPORT = _re_sport.compile(r"\b(serie a|champions|gol|calciomercato|nation
 # ore dopo, il no di Trump). Ogni gruppo viene quindi ristretto alla finestra di
 # FINESTRA_ORE ore che copre meglio sinistra/centro/destra; chi sta fuori esce.
 # Si cambia senza toccare il codice con la variabile ILVAGLIO_FINESTRA_ORE.
-FINESTRA_ORE = float(os.environ.get("ILVAGLIO_FINESTRA_ORE", "5"))
+FINESTRA_ORE = float(os.environ.get("ILVAGLIO_FINESTRA_ORE", "10"))
 # Eccezione (Simone, 28/9): un titolo di sinistra o di destra MOLTO carico
 # (allarme >= SOGLIA_CARICO: parole cariche, origini/nazionalita'...) resta nel
 # confronto anche se scritto fino a FINESTRA_LUNGA ore prima/dopo, perche' e'
 # proprio la versione che rende il confronto interessante. Che parli dello
 # STESSO fatto lo garantiscono verifica() prima e controlla_trio() dopo.
-FINESTRA_LUNGA = float(os.environ.get("ILVAGLIO_FINESTRA_LUNGA", "12"))
+FINESTRA_LUNGA = float(os.environ.get("ILVAGLIO_FINESTRA_LUNGA", "24"))
 SOGLIA_CARICO = 2.5
 
 # Temi che NON si pubblicano (decisione di Simone): lo sport non ha una lettura
@@ -1048,7 +1048,13 @@ def stringi_nel_tempo(eventi, finestra_ore=FINESTRA_ORE):
             dentro = [a for a, t in zip(arts, ts) if ts[i] <= t <= ts[i] + larghezza]
             colonne = {_colonna_di(a) for a in dentro} - {None}
             testate = {a["fonte"] for a in dentro if a.get("area") in AREE}
-            p = (len(colonne), len(testate), len(dentro), ts[i])
+            # 28/9 (caso Bratan): a parita' di colonne vince la finestra con le
+            # versioni PIU' DI PARTE (estremi + titoli carichi), non la piu'
+            # recente: prima vinceva domenica mattina e Libero di sabato restava fuori.
+            forza = sum(1 for a in dentro if a.get("area") in ("SR", "DR")) \
+                + sum(1 for a in dentro if a.get("area") in ("SR", "CS", "CD", "DR")
+                      and allarme(a.get("titolo", "")) >= SOGLIA_CARICO)
+            p = (len(colonne), forza, len(testate), len(dentro), ts[i])
             if punteggio is None or p > punteggio:
                 migliore, punteggio = dentro, p
         tenuti = {id(a) for a in migliore}

@@ -785,11 +785,11 @@ def main():
                 pass
         # 6 ore di norma; fino a 13 se in colonna c'e' un titolo di parte molto
         # carico ammesso apposta dalla finestra lunga (cluster.FINESTRA_LUNGA = 12)
-        limite = 13 if any(x and x.get("fuori_orario_carico") for x in rappresentanti(ev)) else 6
+        limite = 25 if any(x and x.get("fuori_orario_carico") for x in rappresentanti(ev)) else 11
         if len(ore) > 1 and (max(ore) - min(ore)).total_seconds() > limite * 3600:
             lontani.append(ev["titolo_neutro"][:60])
     if lontani:
-        allarmi.append("titoli in colonna a piu' di 6 ore l'uno dall'altro: %s" % "; ".join(lontani[:5]))
+        allarmi.append("titoli in colonna troppo distanti nel tempo: %s" % "; ".join(lontani[:5]))
     for x in allarmi:
         print("  ALLARME QUALITA': %s" % x)
 
