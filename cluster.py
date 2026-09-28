@@ -918,6 +918,8 @@ def verifica(client, eventi):
 
     espulsi_totali, tocchi = [], 0
     for voce in dati.get("controlli", []):
+        if not isinstance(voce, dict):
+            continue
         n = voce.get("evento", 0)
         da_togliere_keys = set(str(x) for x in (voce.get("da_togliere") or []))
         da_togliere = {per_key[k]["id"] for k in da_togliere_keys if k in per_key}
@@ -1115,7 +1117,12 @@ Per ogni confronto scrivi il fatto comune e indica in "fuori" le sigle dei titol
 - «Eni mette un tetto ai prezzi» e «I viaggi in Africa di Meloni con Descalzi» -> fatti diversi.
 - «L'Iran propone una tregua» e «Trump respinge la proposta» -> momenti diversi: fuori quello che non contiene ancora il fatto nuovo.
 
-NON e' fuori un titolo che racconta lo stesso fatto con parole diverse, cariche, di parte, con dettagli in piu' (origine, colpe, bersagli politici) o come commento: quella e' la differenza che il sito vuole mostrare.
+NON e' fuori — e anzi e' il titolo piu' prezioso — un titolo che racconta lo STESSO fatto:
+- con parole diverse, cariche o di parte, o con dettagli in piu' (origine, colpe, bersagli politici);
+- criticandolo o commentandolo (Il Manifesto che critica il tetto ai prezzi Eni il giorno in cui scatta = stesso fatto);
+- indicando una causa, una pista o un responsabile (la «pista iraniana» sull'allarme alla base RAF; «colpa di Vannacci» sul calo dell'affluenza = stesso fatto);
+- con MENO dettagli degli altri (un titolo che non cita la causa non e' un altro fatto).
+E' fuori SOLO se racconta un EVENTO diverso: un'altra dichiarazione di un'altra persona, un altro episodio, un'altra storia (es. il ritratto della contadina che diede l'allarme), un altro momento della vicenda. Nel dubbio, NON togliere.
 
 {confronti}
 
@@ -1152,7 +1159,8 @@ def controlla_trio(client, eventi, giri=2):
                                                       " IN PAGINA (%s)" % marca if marca else "", a["titolo"]))
             blocchi.append("\n".join(righe))
         try:
-            dati, uso = chiama(client, PROMPT_TRIO.format(confronti="\n\n".join(blocchi)), SCHEMA_TRIO)
+            dati, uso = chiama(client, PROMPT_TRIO.format(confronti="\n\n".join(blocchi)), SCHEMA_TRIO,
+                               modello=MODELLO_RAGGRUPPA)
         except BudgetEsaurito:
             raise
         except Exception as exc:
@@ -1160,6 +1168,8 @@ def controlla_trio(client, eventi, giri=2):
             return eventi
         tolti, cambiati = 0, set()
         for voce in dati.get("controlli", []):
+            if not isinstance(voce, dict):
+                continue
             for sigla in voce.get("fuori") or []:
                 ev_a = per_key.get(str(sigla).strip())
                 if not ev_a:
@@ -1283,6 +1293,8 @@ def riscrivi_titoli_copiati(client, eventi, idx):
             print("  riscrittura titoli fallita: %s" % str(exc)[:120])
             return
         for voce in dati.get("titoli", []):
+            if not isinstance(voce, dict):
+                continue
             n = voce.get("evento", 0)
             nuovo = (voce.get("titolo") or "").strip()
             if isinstance(n, int) and 1 <= n <= len(copiati) and nuovo:
@@ -1343,6 +1355,8 @@ def _analizza_blocco(client, eventi, candidati):
     print("  passo 2 analisi: %d token in, %d out" % (uso.input_tokens, uso.output_tokens))
 
     for voce in dati.get("analisi", []):
+        if not isinstance(voce, dict):
+            continue                     # risposta malformata del modello (visto il 28/9)
         n = voce.get("evento", 0)
         if 1 <= n <= len(candidati):
             idx = candidati[n - 1][0]
