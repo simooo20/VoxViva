@@ -1194,7 +1194,12 @@ NON e' fuori — e anzi e' il titolo piu' prezioso — un titolo che racconta lo
 E' fuori SOLO se racconta un EVENTO diverso: un'altra dichiarazione di un'altra persona, un altro episodio, un'altra storia (es. il ritratto della contadina che diede l'allarme), un altro momento della vicenda. Nel dubbio, NON togliere.
 
 POI, tra i titoli rimasti, scegli i tre da mettere IN PAGINA (una sigla per colonna; la colonna di ogni titolo e' indicata fra parentesi quadre):
-- SINISTRA e DESTRA: il titolo piu' DI PARTE e STRILLATO di quel lato, quello che un lettore di quell'area riconoscerebbe come "suo": parole cariche, una citazione forte di un politico («Piantedosi: imbarcato sul primo volo»), un attacco, un bersaglio politico, dettagli di origine, un'accusa, un'ironia. A parita', preferisci la testata piu' estrema (sinistra radicale / destra radicale). Un titolo asciutto da cronaca va scelto SOLO se quel lato non ha altro.
+- SINISTRA e DESTRA: il titolo piu' DI PARTE e STRILLATO di quel lato, quello che un lettore di quell'area riconoscerebbe come "suo" e che si allontana di PIU' dal titolo asciutto del centro. In ordine di forza:
+  1. una frase secca di un politico o di una parte in causa che prende posizione («Piantedosi: imbarcato sul primo volo», «L'avvocato: vicenda ingigantita», «Meloni: un bel segnale»);
+  2. un attacco o un bersaglio politico («la sinistra si indigna», «dalla destra solo gogna»), un'accusa, un'ironia;
+  3. parole cariche o dettagli identitari («terrore», «26enne di origini egiziane», «mai piu' in Italia»);
+  4. solo dopo, un titolo di cronaca, anche se ben scritto.
+  Esempio reale (trapper Bratan): a destra «Bratan blocca la Milano-Meda: espulso. Piantedosi: "Imbarcato sul primo volo"» (Libero) batte «per le autorita' e' un pericolo pubblico» (Il Giornale); a sinistra «L'avvocato: "Vicenda ingigantita, mai vista questa rapidita'"» (Fanpage) batte «espulso dall'Italia dopo 9 giorni» (La Stampa). A parita', preferisci la testata piu' estrema.
 - CENTRO: il titolo piu' ASCIUTTO e fattuale, meglio se d'agenzia (ANSA, AGI, LaPresse, Adnkronos, Italpress, Askanews, Dire). Mai un titolo con citazioni sensazionali, virgolette ad effetto o parole cariche, se ce n'e' uno piu' neutro.
 
 {confronti}
@@ -1239,7 +1244,7 @@ def controlla_trio(client, eventi, giri=2):
         except Exception as exc:
             print("  controllo finale dei titoli saltato: %s" % str(exc)[:120])
             return eventi
-        tolti, cambiati = 0, set()
+        tolti, cambiati, scelte = 0, set(), 0
         for voce in dati.get("controlli", []):
             if not isinstance(voce, dict):
                 continue
@@ -1248,6 +1253,7 @@ def controlla_trio(client, eventi, giri=2):
                 ev_a = per_key.get(str(voce.get(col) or "").strip())
                 if ev_a and COLONNA_DI.get(ev_a[1].get("area")) == col:
                     ev_a[0].setdefault("scelta", {})[col] = ev_a[1].get("id")
+                    scelte += 1
             for sigla in voce.get("fuori") or []:
                 ev_a = per_key.get(str(sigla).strip())
                 if not ev_a:
@@ -1261,8 +1267,8 @@ def controlla_trio(client, eventi, giri=2):
                 cambiati.add(id(ev))
                 tolti += 1
                 print("    tolto %s (%s) - %s" % (sigla, a["fonte"], (voce.get("motivo") or "")[:90]))
-        print("  controllo finale dei titoli (giro %d): %d confronti, %d titoli tolti"
-              % (giro, len(cand), tolti))
+        print("  controllo finale dei titoli (giro %d): %d confronti, %d titoli tolti, %d titoli scelti per la pagina"
+              % (giro, len(cand), tolti, scelte))
         eventi = arricchisci(eventi)       # applica anche la scelta dei titoli da mostrare
         if not tolti:
             return eventi
