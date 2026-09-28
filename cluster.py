@@ -699,7 +699,7 @@ SCHEMA_ABBINA = {
                         "tema": {
                             "type": "string",
                             "enum": ["politica interna", "esteri", "economia", "cronaca", "giustizia", "societa", "immigrazione", "ambiente", "sport", "cultura", "altro"],
-                            "description": "'sport' per QUALSIASI notizia su partite, risultati, squadre, nazionali, atleti o ex atleti.",
+                            "description": "'sport' per QUALSIASI notizia su partite, risultati, squadre, nazionali, atleti o ex atleti. 'cultura' per spettacolo, musica, premi, cinema, tv, celebrita'.",
                         },
                         "ids": {
                             "type": "array",

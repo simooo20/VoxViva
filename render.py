@@ -533,6 +533,13 @@ def main():
         # lo sport non si pubblica (decisione di Simone): vedi TEMI_ESCLUSI in cluster.py
         if ev.get("tema") == "sport":
             return False
+        # spettacolo/cultura (premi, concerti, tv) si pubblica solo se ha davvero
+        # due letture opposte (Simone, 28/9: "Madonna sbanca gli Mtv Awards" no)
+        if ev.get("tema") == "cultura" and ev.get("divergenza") != "alta":
+            return False
+        # mai un confronto senza analisi (niente divergenza/nota = pagina povera)
+        if not ev.get("nota") or not ev.get("divergenza"):
+            return False
         return all(ev["per_colonna"].get(k) for k in ("sinistra", "centro", "destra"))
 
     completi = [ev for ev in eventi if completo(ev)]
