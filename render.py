@@ -134,10 +134,12 @@ a:hover{color:var(--accent)}
 header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22px 0 16px}
 .brand{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
 /* logo di Simone (28/9): "vox" nerissimo + "viva" sottile, Montserrat, minuscolo */
-.brand h1{font-family:"Montserrat",var(--display);font-size:48px;line-height:.95;margin:0;
+.brand .logo{font-family:"Montserrat",var(--display);font-size:48px;line-height:.95;margin:0;
   color:#212121;letter-spacing:-.01em;text-transform:lowercase}
-.brand h1 .vox{font-weight:900;letter-spacing:-.02em}
-.brand h1 .viva{font-weight:300;margin-left:.08em}
+.brand .logo .vox{font-weight:900;letter-spacing:-.02em}
+.brand .logo .viva{font-weight:300;margin-left:.08em}
+.h1-seo{font-family:var(--display);font-size:20px;line-height:1.25;font-weight:600;
+  color:var(--ink);margin:16px 0 6px;letter-spacing:-.01em;max-width:760px}
 .brand .tag{font-size:14px;color:var(--ink-3)}
 .claim{font-family:var(--serif);font-size:16px;line-height:1.35;color:var(--ink-2);
   margin:10px 0 0;max-width:60ch}
@@ -167,7 +169,7 @@ header.top{background:var(--card);border-bottom:1px solid var(--line);padding:22
 
 /* ---------- evento ---------- */
 main{padding:34px 0 10px}
-.sezione-tit{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
+.sezione-tit{font-weight:inherit;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
   margin:40px 0 8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
 .sezione-tit:first-child{margin-top:0}
 .sezione-sub{font-size:14px;color:var(--ink-2);margin:0 0 18px;max-width:78ch;line-height:1.5}
@@ -329,6 +331,9 @@ footer h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:v
   margin:0 0 9px}
 .fcols{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
 footer p{margin:0 0 10px}
+footer .faq{margin-top:30px;max-width:78ch}
+footer .faq h3{font-size:14px;margin:16px 0 4px;color:var(--ink)}
+footer .faq p{font-size:13.5px;color:var(--ink-2);margin:0}
 footer .fonti{font-size:12.5px;color:var(--ink-3);line-height:1.7}
 .legale{margin-top:30px;padding-top:20px;border-top:1px solid var(--line-2);
   font-size:12px;color:var(--ink-3);max-width:82ch}
@@ -345,7 +350,7 @@ footer .fonti{font-size:12.5px;color:var(--ink-3);line-height:1.7}
   .col{border-right:0;border-bottom:1px solid var(--line-2)}
   .col:last-child{border-bottom:0}
   .fcols{grid-template-columns:1fr;gap:24px}
-  .brand h1{font-size:30px} .claim{font-size:15px}
+  .brand .logo{font-size:30px} .h1-seo{font-size:17px} .claim{font-size:15px}
   .scala .estremo{font-size:9.5px}
 }
 """
@@ -508,6 +513,22 @@ def blocco_cieco(ev):
     return "\n".join(p)
 
 
+FAQ = [
+    ("Esistono notizie imparziali?",
+     "No: ogni titolo è una scelta su cosa dire per primo, quali parole usare, cosa lasciare fuori. "
+     "VoxViva non ti dice quale versione è giusta: te le mostra tutte, una accanto all'altra, "
+     "così hai la visione d'insieme e ti fai un'idea tua."),
+    ("Come classificate i giornali tra sinistra, centro e destra?",
+     "Su cinque posizioni, in base alla linea editoriale prevalente della testata e non al singolo "
+     "articolo, confrontandoci con fonti indipendenti come il Digital News Report del Reuters Institute."),
+    ("Cosa vuol dire divergenza alta, media o bassa?",
+     "Quanto cambia il racconto da un lato all'altro: bassa se i titoli dicono quasi la stessa cosa, "
+     "alta se cambiano protagonista, colpa o inquadratura."),
+    ("Ogni quanto si aggiorna?",
+     "Due volte al giorno, la mattina e la sera."),
+]
+
+
 def main():
     global ADESSO
     ap = argparse.ArgumentParser()
@@ -600,14 +621,14 @@ def main():
 
     corpo = []
     if principali:
-        corpo.append('<div class="sezione-tit">Le principali di oggi</div>')
-        corpo.append('<p class="sezione-sub">Le notizie pi&ugrave; grosse del giorno &mdash; quelle in '
-                     'agenda su Google News, coperte da sinistra, centro e destra &mdash; con davanti '
-                     'quelle dove il racconto cambia di pi&ugrave; da un lato all\'altro.</p>')
+        corpo.append('<h2 class="sezione-tit">Le notizie principali di oggi a confronto</h2>')
+        corpo.append('<p class="sezione-sub">Le notizie pi&ugrave; importanti della giornata, raccontate '
+                     'dai giornali di sinistra, di centro e di destra. In cima quelle dove i titoli '
+                     'divergono di pi&ugrave;.</p>')
         corpo += [blocco_evento(ev) for ev in principali]
     if altri:
         corpo.append(slot_ads("in_feed"))
-        corpo.append('<div class="sezione-tit">Dove il racconto cambia di pi&ugrave;</div>')
+        corpo.append('<h2 class="sezione-tit">Dove il racconto cambia di pi&ugrave;</h2>')
         corpo.append('<p class="sezione-sub">Altri confronti coperti da sinistra, centro e destra, '
                      'ordinati per quanto cambia l\'inquadratura tra un\'area e l\'altra.</p>')
         corpo += [blocco_evento(ev) for ev in altri]
@@ -657,8 +678,17 @@ def main():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VoxViva &mdash; la stessa notizia, da un estremo all'altro</title>
-<meta name="description" content="Come la stessa notizia italiana viene titolata dalla sinistra radicale alla destra radicale. Aggiornato ogni giorno.">
+<title>Notizie equilibrate: sinistra, centro e destra a confronto | VoxViva</title>
+<meta name="description" content="Notizie equilibrate: la stessa notizia raccontata dai giornali di sinistra, centro e destra, fianco a fianco. Non fermarti a un solo giornale: rassegna stampa aggiornata ogni giorno.">
+<link rel="canonical" href="https://voxviva.xyz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VoxViva">
+<meta property="og:locale" content="it_IT">
+<meta property="og:url" content="https://voxviva.xyz/">
+<meta property="og:title" content="Notizie equilibrate: sinistra, centro e destra a confronto | VoxViva">
+<meta property="og:description" content="Notizie equilibrate: la stessa notizia raccontata dai giornali di sinistra, centro e destra, fianco a fianco. Non fermarti a un solo giornale: rassegna stampa aggiornata ogni giorno.">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">%(jsonld)s</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Montserrat:wght@300;900&display=swap" rel="stylesheet">
@@ -669,12 +699,14 @@ def main():
 %(leaderboard)s
 <header class="top"><div class="wrap">
   <div class="brand">
-    <h1 aria-label="VoxViva"><span class="vox">vox</span><span class="viva">viva</span></h1>
+    <div class="logo" aria-label="VoxViva"><span class="vox">vox</span><span class="viva">viva</span></div>
     <span class="tag">la stessa notizia, da un estremo all'altro</span>
   </div>
-  <p class="claim">Quasi nessuno legge gli articoli: si leggono i titoli. Qui ogni notizia
-  italiana &egrave; messa accanto a se stessa, dal titolo pi&ugrave; a sinistra a quello pi&ugrave;
-  a destra, col lancio d'agenzia in mezzo. Nessun titolo &egrave; riscritto.</p>
+  <h1 class="h1-seo">Notizie equilibrate: i giornali di sinistra, centro e destra a confronto</h1>
+  <p class="claim">Le notizie neutrali non esistono: ogni giornale sceglie cosa mettere nel titolo.
+  Leggerne uno solo significa vedere solo un pezzo. VoxViva mette uno accanto all'altro i titoli
+  dei giornali italiani di sinistra, di centro e di destra sulla stessa notizia: hai la visione
+  d'insieme, vedi subito come cambia il racconto e ti fai un'idea tua. Nessun titolo &egrave; riscritto.</p>
   <div class="scala">%(scala)s</div>
   %(avviso)s
   <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">
@@ -690,20 +722,17 @@ def main():
   <div class="fcols">
     <div>
       <h4>Come funziona</h4>
-      <p>Dietro il sito c'&egrave; un software automatico, costruito con l'intelligenza
-      artificiale di <b>Claude</b> (Anthropic). Due volte al giorno legge i feed RSS delle
-      testate italiane e un modello linguistico raggruppa i titoli che parlano dello stesso
-      fatto &mdash; non per parole in comune, ma per contenuto: &egrave; il punto, dato che
-      le parole sono proprio la cosa che cambia da un lato all'altro.</p>
-      <p>Lo stesso modello scrive il titolo neutro dell'evento e la nota &laquo;come cambia
-      il racconto&raquo;, e mette davanti le notizie dove il racconto diverge di pi&ugrave;
-      tra destra e sinistra. I titoli delle colonne, invece, non vengono <b>mai</b> riscritti:
-      sono quelli pubblicati dalle testate, alla lettera.</p>
-      <p>Le <b>principali</b> non le sceglie una redazione: sono le notizie che l'agenzia ANSA
-      ha messo in prima pagina e che almeno un giornale ha ripreso. Cos&igrave; l'agenda del
-      giorno resta neutrale. Una notizia si pubblica solo se &egrave; coperta da tutte e tre
-      le aree &mdash; sinistra, centro e destra &mdash; e quando raggruppa, il modello non
-      vede la posizione politica delle testate.</p>
+      <p>Ogni giorno VoxViva legge i titoli di oltre 80 testate italiane &mdash; quotidiani,
+      agenzie e siti d'informazione &mdash; e parte da Google News per individuare le notizie
+      pi&ugrave; importanti della giornata. Per ognuna raccoglie le versioni dei giornali di
+      sinistra, centro e destra e le mette a confronto.</p>
+      <p>Il lavoro &egrave; automatico e usa l'intelligenza artificiale <b>Claude</b> (Anthropic):
+      riconosce quando testate diverse parlano dello stesso fatto anche con parole opposte,
+      sceglie per ogni area il titolo pi&ugrave; rappresentativo, misura la divergenza e scrive
+      la nota &laquo;come cambia il racconto&raquo;. I titoli non vengono <b>mai</b> riscritti:
+      sono quelli pubblicati, con il link all'articolo originale.</p>
+      <p>Una notizia esce solo se &egrave; coperta da tutte e tre le aree. Al centro c'&egrave;,
+      quando esiste, il lancio d'agenzia: la versione pi&ugrave; asciutta.</p>
     </div>
     <div>
       <h4>Le etichette</h4>
@@ -720,6 +749,10 @@ def main():
       <p class="fonti">%(fonti)s</p>
     </div>
   </div>
+  <section class="faq">
+    <h2 class="sezione-tit">Domande frequenti</h2>
+%(faq_html)s
+  </section>
   <p class="legale">VoxViva riporta i titoli cos&igrave; come pubblicati, con l'indicazione
   della testata e il collegamento all'articolo originale, e non riproduce i testi. Ogni clic
   porta al sito dell'editore. Le testate sono titolari dei diritti sui propri contenuti; per
@@ -735,6 +768,17 @@ def main():
         "adsense": _adsense_head(),
         "leaderboard": ('<div class="wrap wrap-ad">%s</div>' % slot_ads("leaderboard")) if slot_ads("leaderboard") else "",
         "footer_ad": slot_ads("footer"),
+        "faq_html": "\n".join('    <h3>%s</h3>\n    <p>%s</p>' % (e(q), e(r)) for q, r in FAQ),
+        "jsonld": json.dumps({
+            "@context": "https://schema.org",
+            "@graph": [
+                {"@type": "WebSite", "name": "VoxViva", "url": "https://voxviva.xyz/",
+                 "inLanguage": "it-IT",
+                 "description": "Notizie equilibrate: la stessa notizia raccontata dai giornali di sinistra, centro e destra, fianco a fianco."},
+                {"@type": "FAQPage", "mainEntity": [
+                    {"@type": "Question", "name": q,
+                     "acceptedAnswer": {"@type": "Answer", "text": r}} for q, r in FAQ]},
+            ]}, ensure_ascii=False).replace("</", "<\\/"),
         "consenso": _banner_consenso(),
         "stat": '<div class="stats">%s</div>' % stat_html,
         "scala": scala_html,

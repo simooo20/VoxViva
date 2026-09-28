@@ -61,7 +61,7 @@ jobs:
           ILVAGLIO_BATCH: ${{ inputs.veloce && '0' || vars.ILVAGLIO_BATCH || '1' }}
           ILVAGLIO_INTENSITA_ALLARME: ${{ vars.ILVAGLIO_INTENSITA_ALLARME || '1.6' }}
           ILVAGLIO_PESO_DIVERGENZA: ${{ vars.ILVAGLIO_PESO_DIVERGENZA || '14' }}
-          ILVAGLIO_TETTO_USD: ${{ vars.ILVAGLIO_TETTO_USD || '0.60' }}   # tetto di spesa al giorno (USD): oltre, resta online l'ultima versione
+          ILVAGLIO_TETTO_USD: ${{ vars.ILVAGLIO_TETTO_USD || '1.00' }}   # tetto di spesa al giorno (USD): oltre, resta online l'ultima versione
           ILVAGLIO_SOGLIA_DIVERGENZA: ${{ vars.ILVAGLIO_SOGLIA_DIVERGENZA || '0.65' }}
           ILVAGLIO_MAX_SOCIAL: ${{ vars.ILVAGLIO_MAX_SOCIAL || '2' }}
         run: |
