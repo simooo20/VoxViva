@@ -792,6 +792,13 @@ def main():
         allarmi.append("titoli in colonna troppo distanti nel tempo: %s" % "; ".join(lontani[:5]))
     for x in allarmi:
         print("  ALLARME QUALITA': %s" % x)
+    # Paracadute (28/9): se piu' di meta' dei confronti esce senza analisi (di
+    # solito perche' il credito API e' finito a meta' giro), NON si pubblica:
+    # il workflow si ferma prima del deploy e resta online la versione buona.
+    NON_PUBBLICARE = bool(pubblicati) and len(senza_analisi) * 2 > len(pubblicati)
+    if NON_PUBBLICARE:
+        allarmi.append("versione NON pubblicata: %d confronti su %d senza analisi (credito API?)"
+                       % (len(senza_analisi), len(pubblicati)))
 
     stato = {
         "allarmi": allarmi,
@@ -811,6 +818,8 @@ def main():
     }
     (OUT.parent / "stato.json").write_text(
         json.dumps(stato, ensure_ascii=False, indent=2), encoding="utf-8")
+    if NON_PUBBLICARE:
+        raise SystemExit("Versione scadente (analisi mancante): non la pubblico, resta online la precedente.")
 
     print("Sito generato: %s" % OUT)
     print("  %d confronti pubblicati (%d in prima pagina), %d scartati per lato mancante, %d punti ciechi"
