@@ -363,12 +363,18 @@ def main():
         nome = src.get("etichetta") or src["name"]   # ANSA cronaca -> "ANSA"
         area, url_feed = src["area"], src.get("rss") or ""
         primaria = bool(src.get("primaria"))         # ANSA topnews -> spina dorsale
-        if not url_feed:
+        # 29/9: una testata SENZA feed ma con "sitemap": true (Dagospia,
+        # Pagella Politica...) non si salta piu': passa direttamente ai ripieghi
+        # qui sotto (news sitemap, poi Google News per sito).
+        if not url_feed and not src.get("sitemap"):
             report.append({"fonte": nome, "area": area, "presi": 0, "nota": "nessun feed configurato"})
             continue
         try:
-            dati_feed = scarica_feed(url_feed)
-            fp = feedparser.parse(dati_feed) if dati_feed else feedparser.parse(url_feed, agent=UA)
+            if url_feed:
+                dati_feed = scarica_feed(url_feed)
+                fp = feedparser.parse(dati_feed) if dati_feed else feedparser.parse(url_feed, agent=UA)
+            else:
+                fp = feedparser.parse(b"")
         except Exception as exc:
             report.append({"fonte": nome, "area": area, "presi": 0, "nota": "errore: %s" % str(exc)[:80]})
             continue

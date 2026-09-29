@@ -725,6 +725,19 @@
       "integra": true
     },
     {
+      "name": "Il Giornale d'Italia",
+      "domain": "ilgiornaleditalia.it",
+      "area": "DR",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Destra sovranista. Sito che blocca la lettura automatica: titoli via sitemap o Google News per sito.",
+      "sitemap": true,
+      "integra": true
+    },
+    {
       "name": "Factanza",
       "domain": "factanza.it",
       "area": "CS",
@@ -901,6 +914,54 @@
       "tipo": "giornale"
     },
     {
+      "name": "Dagospia",
+      "domain": "dagospia.com",
+      "area": "C",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Suggerita da Simone. Nessun feed: titoli dalla sitemap o da Google News per sito. Linea trasversale, titoli molto carichi: collocazione C da confermare con Simone.",
+      "sitemap": true
+    },
+    {
+      "name": "Pagella Politica",
+      "domain": "pagellapolitica.it",
+      "area": "C",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Suggerita da Simone. Fact-checking politico. Nessun feed: sitemap o Google News.",
+      "sitemap": true
+    },
+    {
+      "name": "ISPI",
+      "domain": "ispionline.it",
+      "area": "C",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "centro studi",
+      "nota": "Suggerita da Simone. Istituto di politica internazionale, analisi esteri. Sitemap o Google News.",
+      "sitemap": true
+    },
+    {
+      "name": "Breaking Italy",
+      "domain": "breakingitaly.it",
+      "area": "C",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Suggerita da Simone. Alessandro Masala, spiegazione delle notizie (soprattutto video). Nessun feed: sitemap o Google News.",
+      "sitemap": true
+    },
+    {
       "name": "MicroMega",
       "domain": "micromega.net",
       "area": "SR",
@@ -985,6 +1046,19 @@
       "integra": true
     },
     {
+      "name": "Radio Onda d'Urto",
+      "domain": "radiondadurto.org",
+      "area": "SR",
+      "rss": "",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Radio di movimento bresciana, notiziario quotidiano. Il sito blocca i lettori automatici: titoli via Google News per sito.",
+      "sitemap": true,
+      "integra": true
+    },
+    {
       "name": "Globalist",
       "domain": "globalist.it",
       "area": "CS",
@@ -1005,6 +1079,29 @@
       "primaria": false,
       "nota": "The Post Internazionale: taglio progressista/populista di sinistra. Molto materiale, anche soft news.",
       "tipo": "giornale"
+    },
+    {
+      "name": "Rivista Studio",
+      "domain": "rivistastudio.com",
+      "area": "CS",
+      "rss": "https://www.rivistastudio.com/feed/",
+      "proprieta": "",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "rivista",
+      "nota": "Suggerita da Simone. Cultura e societa', progressista. Feed ok 29/09/2026 (molta cultura: entra nei confronti solo sui temi politici)."
+    },
+    {
+      "name": "VD News",
+      "domain": "vdnews.it",
+      "area": "CS",
+      "rss": "",
+      "proprieta": "GEDI",
+      "stato": "aggiunta 29/09/2026",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Suggerita da Simone. Video-giornalismo GEDI (Alfemminile srl), taglio progressista: lavoro, casa, clima. Nessun feed: sitemap o Google News.",
+      "sitemap": true
     },
     {
       "name": "Il Sussidiario",
