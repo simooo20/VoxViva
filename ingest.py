@@ -255,6 +255,9 @@ def titoli_da_sitemap(dominio, taglio, limite=60):
                 candidate.append(m.group(1).strip())
     if not candidate:
         candidate = ["https://%s%s" % (dominio, p) for p in _RISERVE_SITEMAP]
+    # 29/9: prima la news sitemap (Libero: sitemap.xml, sitemap_news.xml...;
+    # solo la news sitemap ha titolo e data di ogni pezzo)
+    candidate.sort(key=lambda u: 0 if "news" in u.lower() else 1)
 
     out, visti = [], set()
 
@@ -450,10 +453,17 @@ def main():
             return True
 
         # Ripiego 1: RSS a zero + fonte con "sitemap": true -> news sitemap.
+        # 29/9: "integra": true (tutte le SR/DR) -> sitemap e Google News si
+        # usano SEMPRE, non solo col feed a zero. Le radicali sono la merce
+        # scarsa del sito e i loro feed tengono pochi pezzi (Libero 30 = ~4 h,
+        # La Verita' 10): con due giri al giorno la maggior parte si perdeva.
+        # I doppioni (stesso URL o stesso titolo) li toglie aggiungi().
+        integra = bool(src.get("integra"))
         via_sitemap = 0
-        if presi == 0 and src.get("sitemap"):
+        if (presi == 0 and src.get("sitemap")) or integra:
             try:
-                for pos, (t, l, dt) in enumerate(titoli_da_sitemap(src["domain"], taglio)):
+                limite_sm = 200 if integra else 60
+                for pos, (t, l, dt) in enumerate(titoli_da_sitemap(src["domain"], taglio, limite_sm)):
                     if aggiungi(t, l, dt, pos, " (sitemap)"):
                         presi += 1
                         via_sitemap += 1
@@ -466,9 +476,10 @@ def main():
         # feed che funzionano (ANSA/AGI restano ricchi). Si spegne per fonte
         # con "google_news": false.
         via_gnews = 0
-        if presi == 0 and area != "AGG" and src.get("google_news", True):
+        if (presi == 0 or integra) and area != "AGG" and src.get("google_news", True):
             try:
-                for pos, (t, l, dt) in enumerate(titoli_da_google_news(src["domain"], taglio)):
+                limite_gn = 100 if integra else 40
+                for pos, (t, l, dt) in enumerate(titoli_da_google_news(src["domain"], taglio, limite_gn)):
                     if aggiungi(t, l, dt, pos, " (google news)", dominio=src["domain"]):
                         presi += 1
                         via_gnews += 1
@@ -477,7 +488,9 @@ def main():
                                "nota": "google news ko: %s" % str(exc)[:60]})
 
         nota = ""
-        if via_sitemap:
+        if integra and (via_sitemap or via_gnews):
+            nota = "integrati: +%d sitemap, +%d Google News" % (via_sitemap, via_gnews)
+        elif via_sitemap:
             nota = "recuperati %d dalla sitemap (RSS a zero)" % via_sitemap
         elif via_gnews:
             nota = "recuperati %d da Google News (RSS a zero)" % via_gnews

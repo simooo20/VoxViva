@@ -903,6 +903,11 @@ def raggruppa_da_google(client, articoli, storie, ore):
 
 
 MAX_RICERCHE = int(os.environ.get("ILVAGLIO_MAX_RICERCHE", "45"))
+# ricerca solo sulle radicali: per quante notizie, quanti siti per ricerca,
+# quante ore indietro
+MAX_RICERCHE_ESTREMI = int(os.environ.get("ILVAGLIO_MAX_RICERCHE_ESTREMI", "30"))
+PER_RICERCA_ESTREMI = 6
+ORE_RICERCA_ESTREMI = 36
 
 
 def ricerca_mirata(eventi, articoli):
@@ -923,9 +928,38 @@ def ricerca_mirata(eventi, articoli):
     cand.sort(key=lambda ev: (ev.get("ordine_google") is None, ev.get("ordine_google") or 0,
                               -len(ev["articoli"])))
     cand = cand[:MAX_RICERCHE]
+    # 29/9 (Simone): la ricerca generica restituisce i giornali grandi, le
+    # radicali in cima non ci arrivano quasi mai. Per ogni notizia a cui manca
+    # l'estremo di un lato si fa una seconda ricerca SOLO sui siti SR (o DR),
+    # con finestra lunga: spesso escono piu' tardi o il giorno dopo.
+    dom_estremi = {"SR": [], "DR": []}
+    for f in fonti:
+        if f.get("area") in dom_estremi and f.get("domain"):
+            d = gnews.dominio(f["domain"])
+            if d not in dom_estremi[f["area"]]:
+                dom_estremi[f["area"]].append(d)
+
+    def _query_estremi(ev):
+        presenti = {a.get("area") for a in ev["articoli"]}
+        out = []
+        for area in ("SR", "DR"):
+            if area in presenti:
+                continue
+            doms = dom_estremi[area]
+            for i in range(0, len(doms), PER_RICERCA_ESTREMI):
+                siti = " OR ".join("site:" + d for d in doms[i:i + PER_RICERCA_ESTREMI])
+                out.append("%s (%s)" % (ev["cerca"], siti))
+        return out
+
     aggiunti = 0
-    for ev in cand:
-        for r in gnews.cerca(ev["cerca"]):
+    da_estremi = 0
+    for n_ev, ev in enumerate(cand):
+        risultati = list(gnews.cerca(ev["cerca"]))
+        if n_ev < MAX_RICERCHE_ESTREMI:
+            for q in _query_estremi(ev):
+                _t.sleep(0.4)
+                risultati += gnews.cerca(q, ore=ORE_RICERCA_ESTREMI)
+        for r in risultati:
             chi = testate.riconosci(r["fonte_google"], r["url_fonte"])
             if not chi or r["link"] in gia_url:
                 continue
@@ -943,9 +977,11 @@ def ricerca_mirata(eventi, articoli):
             })
             gia_url.add(r["link"])
             aggiunti += 1
+            if area in ("SR", "DR"):
+                da_estremi += 1
         _t.sleep(0.4)
-    print("  ricerca mirata su Google News: %d notizie, %d titoli nuovi dalle nostre testate"
-          % (len(cand), aggiunti))
+    print("  ricerca mirata su Google News: %d notizie, %d titoli nuovi dalle nostre testate "
+          "(di cui %d di sinistra/destra radicale)" % (len(cand), aggiunti, da_estremi))
     return eventi
 
 

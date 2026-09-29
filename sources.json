@@ -50,7 +50,8 @@
       "rss": "https://cms.ilmanifesto.it/feed",
       "proprieta": "cooperativa di giornalisti",
       "stato": "url cms diretto",
-      "nota": "Si autodefinisce 'quotidiano comunista' nella descrizione del feed. Il feed disponibile contiene l'edizione cartacea (cultura, spettacoli) con 1-2 giorni di ritardo: per il confronto sui titoli del giorno serve un feed di cronaca. cms.ilmanifesto.it/sezione/politica/feed esiste ma torna vuoto."
+      "nota": "Si autodefinisce 'quotidiano comunista' nella descrizione del feed. Il feed disponibile contiene l'edizione cartacea (cultura, spettacoli) con 1-2 giorni di ritardo: per il confronto sui titoli del giorno serve un feed di cronaca. cms.ilmanifesto.it/sezione/politica/feed esiste ma torna vuoto.",
+      "integra": true
     },
     {
       "name": "Left",
@@ -59,7 +60,8 @@
       "rss": "https://left.it/feed/",
       "proprieta": "Edizioni Left",
       "stato": "ok",
-      "nota": "Unico feed della casella SR che funziona davvero, dato che Il Manifesto pubblica solo il cartaceo. Pubblica pochi pezzi al giorno: l'estremo sinistro del duello resta fragile finche' non si trova un feed di cronaca per Il Manifesto."
+      "nota": "Unico feed della casella SR che funziona davvero, dato che Il Manifesto pubblica solo il cartaceo. Pubblica pochi pezzi al giorno: l'estremo sinistro del duello resta fragile finche' non si trova un feed di cronaca per Il Manifesto.",
+      "integra": true
     },
     {
       "name": "Il Primato Nazionale",
@@ -68,7 +70,8 @@
       "rss": "https://www.ilprimatonazionale.it/feed/",
       "proprieta": "area CasaPound",
       "stato": "ok",
-      "nota": "Pubblica poco al giorno: comparira' raramente nei confronti. Va tenuto perche' presidia l'estremo destro della scala."
+      "nota": "Pubblica poco al giorno: comparira' raramente nei confronti. Va tenuto perche' presidia l'estremo destro della scala.",
+      "integra": true
     },
     {
       "name": "La Repubblica",
@@ -367,7 +370,8 @@
       "rss": "https://www.liberoquotidiano.it/rss.xml",
       "proprieta": "famiglia Angelucci",
       "stato": "url aggiornato da liste feed",
-      "nota": "Simone/Wikipedia: destra radicale / populista di destra. Spostato da CD a DR. Proprieta' famiglia Angelucci. "
+      "nota": "Simone/Wikipedia: destra radicale / populista di destra. Spostato da CD a DR. Proprieta' famiglia Angelucci. ",
+      "integra": true
     },
     {
       "name": "Il Tempo",
@@ -421,7 +425,8 @@
       "rss": "https://www.laverita.info/feed",
       "proprieta": "La Verita' srl (Maurizio Belpietro)",
       "stato": "ok",
-      "nota": "Sovranista, con una sezione fissa intitolata 'cronache dell'invasione': la scelta di nome e' essa stessa un dato sulla linea."
+      "nota": "Sovranista, con una sezione fissa intitolata 'cronache dell'invasione': la scelta di nome e' essa stessa un dato sulla linea.",
+      "integra": true
     },
     {
       "name": "La Nuova Bussola Q.",
@@ -430,7 +435,8 @@
       "rss": "https://lanuovabq.it/it/rss",
       "proprieta": "Associazione Bussola Quotidiana",
       "stato": "da_verificare",
-      "nota": "Cattolica tradizionalista. Sull'asse politico sinistra-destra e' un incastro imperfetto: si posiziona su temi etici piu' che economici."
+      "nota": "Cattolica tradizionalista. Sull'asse politico sinistra-destra e' un incastro imperfetto: si posiziona su temi etici piu' che economici.",
+      "integra": true
     },
     {
       "name": "Liberazione",
@@ -439,7 +445,8 @@
       "rss": "",
       "proprieta": "area Rifondazione Comunista",
       "stato": "url_da_trovare_forse_solo_web",
-      "nota": "Simone: sinistra. Storico quotidiano di Rifondazione Comunista, oggi presenza online saltuaria: verifica che esista un feed vivo. Se c'e', rinforza la casella SR insieme a Il Manifesto e Left, oggi fragile."
+      "nota": "Simone: sinistra. Storico quotidiano di Rifondazione Comunista, oggi presenza online saltuaria: verifica che esista un feed vivo. Se c'e', rinforza la casella SR insieme a Il Manifesto e Left, oggi fragile.",
+      "integra": true
     },
     {
       "name": "Gazzetta del Sud",
@@ -599,7 +606,8 @@
       "stato": "da verificare (batch feed aperti)",
       "primaria": false,
       "nota": "sinistra, rafforza SR",
-      "tipo": "giornale"
+      "tipo": "giornale",
+      "integra": true
     },
     {
       "name": "Collettiva",
@@ -665,7 +673,8 @@
       "stato": "da verificare (batch feed aperti)",
       "primaria": false,
       "nota": "sovranista/anti-establishment",
-      "tipo": "giornale"
+      "tipo": "giornale",
+      "integra": true
     },
     {
       "name": "Byoblu",
@@ -676,7 +685,44 @@
       "stato": "da verificare (batch feed aperti)",
       "primaria": false,
       "nota": "sovranista",
-      "tipo": "giornale"
+      "tipo": "giornale",
+      "integra": true
+    },
+    {
+      "name": "Nicola Porro",
+      "domain": "nicolaporro.it",
+      "area": "DR",
+      "rss": "https://www.nicolaporro.it/feed/",
+      "proprieta": "Nicola Porro (include Atlantico Quotidiano)",
+      "stato": "ok (verificato 29/09/2026: 15 pezzi in 6 h)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Destra liberal-populista, titoli molto carichi (es. 'il cocco di Elly'). Collocata DR come Libero; da confermare con Simone (in alternativa CD).",
+      "integra": true
+    },
+    {
+      "name": "Radio Radio",
+      "domain": "radioradio.it",
+      "area": "DR",
+      "rss": "https://www.radioradio.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Sovranista, anti-establishment. Esteri e politica, qualche pezzo di calcio (lo sport viene gia' scartato).",
+      "integra": true
+    },
+    {
+      "name": "CulturaIdentita",
+      "domain": "culturaidentita.it",
+      "area": "DR",
+      "rss": "https://www.culturaidentita.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026, pochi pezzi)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Destra identitaria, soprattutto cultura; entra nei confronti solo sui temi politici.",
+      "integra": true
     },
     {
       "name": "Factanza",
@@ -863,7 +909,80 @@
       "stato": "ok (verificato 23/08)",
       "primaria": false,
       "nota": "Rivista di sinistra intellettuale/radicale, molto schierata. Politica e cultura.",
-      "tipo": "rivista"
+      "tipo": "rivista",
+      "integra": true
+    },
+    {
+      "name": "Contropiano",
+      "domain": "contropiano.org",
+      "area": "SR",
+      "rss": "https://contropiano.org/feed",
+      "proprieta": "area Rete dei Comunisti",
+      "stato": "ok (verificato 29/09/2026: 10 pezzi in 5 h)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Quotidiano online comunista, cronaca politica e sindacale ogni giorno. Rinforza la casella SR, finora fragile.",
+      "integra": true
+    },
+    {
+      "name": "L'Antidiplomatico",
+      "domain": "lantidiplomatico.it",
+      "area": "SR",
+      "rss": "https://www.lantidiplomatico.it/rss.php",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026: 15 pezzi in 7 h)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Sinistra antimperialista, molto schierata sugli esteri (anti-NATO, filo-palestinese). Tanti pezzi al giorno. Collocazione SR da confermare con Simone.",
+      "integra": true
+    },
+    {
+      "name": "Infoaut",
+      "domain": "infoaut.org",
+      "area": "SR",
+      "rss": "https://www.infoaut.org/feed",
+      "proprieta": "collettivo redazionale dei movimenti",
+      "stato": "ok (verificato 29/09/2026)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Informazione di movimento (autonomia, No Tav, lotte sociali).",
+      "integra": true
+    },
+    {
+      "name": "Pagine Esteri",
+      "domain": "pagineesteri.it",
+      "area": "SR",
+      "rss": "https://pagineesteri.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026, pochi pezzi)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Esteri da sinistra (Medio Oriente, Africa, America Latina).",
+      "integra": true
+    },
+    {
+      "name": "DINAMOpress",
+      "domain": "dinamopress.it",
+      "area": "SR",
+      "rss": "https://www.dinamopress.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026, pochi pezzi)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Sito di movimento romano, nato 2012. Pochi pezzi ma molto di parte.",
+      "integra": true
+    },
+    {
+      "name": "OttolinaTV",
+      "domain": "ottolinatv.it",
+      "area": "SR",
+      "rss": "https://ottolinatv.it/feed/",
+      "proprieta": "",
+      "stato": "ok (verificato 29/09/2026, pochi pezzi)",
+      "primaria": false,
+      "tipo": "giornale",
+      "nota": "Media online nato 2023, sinistra anticapitalista, economia e geopolitica.",
+      "integra": true
     },
     {
       "name": "Globalist",
