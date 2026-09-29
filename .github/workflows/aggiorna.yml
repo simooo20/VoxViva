@@ -1,4 +1,4 @@
-# VoxViva — aggiornamento automatico del sito
+# VoxViva — aggiornamento automatico del sito.
 #
 # Cosa fa: due volte al giorno (e ogni volta che lo lanci a mano) rigira la
 # pipeline — legge i feed, raggruppa le notizie con l'LLM, ricostruisce la
