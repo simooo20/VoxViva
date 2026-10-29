@@ -79,9 +79,15 @@ jobs:
         if: steps.serve.outputs.salta != 'si'
         run: pip install -r requirements.txt
 
+      # Se il giro fallisce il sito resta all'ultima versione e il workflow
+      # NON diventa rosso (niente mail "Run failed" di GitHub): il problema lo
+      # segnala il passo dopo, una volta sola, con le ultime righe del log.
       - name: Rigenera la pagina
+        id: rigenera
         if: steps.serve.outputs.salta != 'si'
+        continue-on-error: true
         env:
+          PYTHONUNBUFFERED: "1"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # manopole opzionali: si regolano da Settings > Variables, senza toccare il codice
           ILVAGLIO_MODEL: ${{ vars.ILVAGLIO_MODEL || 'claude-haiku-4-5' }}
@@ -94,47 +100,48 @@ jobs:
           ILVAGLIO_SOGLIA_DIVERGENZA: ${{ vars.ILVAGLIO_SOGLIA_DIVERGENZA || '0.65' }}
           ILVAGLIO_MAX_SOCIAL: ${{ vars.ILVAGLIO_MAX_SOCIAL || '2' }}
         run: |
-          python ingest.py --ore 24
-          python cluster.py
-          python render.py --max 15
+          set -o pipefail
+          { python ingest.py --ore 24 && python cluster.py && python render.py --max 15; } 2>&1 | tee giro.log
 
-      # Controllo qualita': se render.py ha trovato problemi (confronti senza
-      # divergenza, pochi confronti, sport, titoli di ore diverse) apre o
-      # aggiorna la segnalazione "Controllo qualita' VoxViva" su GitHub: arriva
-      # per email. Non blocca mai la pubblicazione.
-      - name: Segnala problemi di qualita'
+      # Segnalazione "Controllo qualita VoxViva" (issue #1): ogni commento e'
+      # una mail, quindi si scrive UNA volta per problema, non a ogni giro
+      # (regola in segnala.py): giro fallito la prima volta, sito ripartito,
+      # tipo di allarme di qualita' nuovo. Lo stesso problema ripetuto = silenzio.
+      - name: Segnala i problemi (una mail per problema)
         if: always() && steps.serve.outputs.salta != 'si'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          ESITO: ${{ steps.rigenera.outcome }}
+          GIRO: ${{ github.run_number }}
+          CHIAVI_FILE: chiavi.txt
         run: |
-          python - <<'PY' > allarmi.txt
-          import json
-          try:
-              a = json.load(open("web/stato.json")).get("allarmi") or []
-          except Exception as e:
-              a = ["stato.json non leggibile: %s" % e]
-          if a: print("\n".join("- " + x for x in a))
-          PY
-          if [ -s allarmi.txt ]; then
-            N=$(gh issue list --state open --search "Controllo qualita VoxViva in:title" --json number -q '.[0].number')
-            TESTO="$(date -u '+%Y-%m-%d %H:%M UTC') - giro ${{ github.run_number }}"$'\n\n'"$(cat allarmi.txt)"
-            if [ -n "$N" ]; then gh issue comment "$N" --body "$TESTO"; else gh issue create --title "Controllo qualita VoxViva" --body "$TESTO"; fi
+          N=$(gh issue list --state open --search "Controllo qualita VoxViva in:title" --json number -q '.[0].number')
+          : > chiavi.txt
+          if [ -n "$N" ]; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$N/comments" \
+              --jq '.[] | .body | scan("<!-- chiave: ([^>]*?) -->") | .[0]' > chiavi.txt
+          fi
+          python segnala.py > commento.txt
+          if [ ! -s commento.txt ]; then
+            echo "Niente di nuovo da segnalare: nessuna mail."
+          elif [ -n "$N" ]; then
+            gh issue comment "$N" --body-file commento.txt
           else
-            echo "Nessun problema di qualita'."
+            gh issue create --title "Controllo qualita VoxViva" --body-file commento.txt
           fi
 
       - name: Configura Pages
-        if: steps.serve.outputs.salta != 'si'
+        if: steps.serve.outputs.salta != 'si' && steps.rigenera.outcome == 'success'
         uses: actions/configure-pages@v5
 
       - name: Carica il sito
-        if: steps.serve.outputs.salta != 'si'
+        if: steps.serve.outputs.salta != 'si' && steps.rigenera.outcome == 'success'
         uses: actions/upload-pages-artifact@v5
         with:
           path: web
 
       - name: Pubblica su Pages
-        if: steps.serve.outputs.salta != 'si'
+        if: steps.serve.outputs.salta != 'si' && steps.rigenera.outcome == 'success'
         id: deploy
         uses: actions/deploy-pages@v5
