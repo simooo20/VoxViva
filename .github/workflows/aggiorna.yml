@@ -29,7 +29,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-  issues: write     # per la segnalazione automatica dei problemi di qualita'
 
 
 # se parte un nuovo giro mentre il precedente non ha finito, l'ultimo vince
@@ -80,8 +79,8 @@ jobs:
         run: pip install -r requirements.txt
 
       # Se il giro fallisce il sito resta all'ultima versione e il workflow
-      # NON diventa rosso (niente mail "Run failed" di GitHub): il problema lo
-      # segnala il passo dopo, una volta sola, con le ultime righe del log.
+      # NON diventa rosso (niente mail "Run failed" di GitHub): il problema
+      # resta scritto nel riepilogo del giro (passo dopo).
       - name: Rigenera la pagina
         id: rigenera
         if: steps.serve.outputs.salta != 'si'
@@ -103,33 +102,37 @@ jobs:
           set -o pipefail
           { python ingest.py --ore 24 && python cluster.py && python render.py --max 15; } 2>&1 | tee giro.log
 
-      # Segnalazione "Controllo qualita VoxViva" (issue #1): ogni commento e'
-      # una mail, quindi si scrive UNA volta per problema, non a ogni giro
-      # (regola in segnala.py): giro fallito la prima volta, sito ripartito,
-      # tipo di allarme di qualita' nuovo. Lo stesso problema ripetuto = silenzio.
-      - name: Segnala i problemi (una mail per problema)
+      # Nessuna mail (richiesta di Simone, 31/10): i problemi restano scritti
+      # solo nella pagina del giro su GitHub (riepilogo + avvisi gialli).
+      # Nessun commento sulla segnalazione #1, che non viene piu' toccata.
+      - name: Riepilogo del giro (senza mail)
         if: always() && steps.serve.outputs.salta != 'si'
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
           ESITO: ${{ steps.rigenera.outcome }}
-          GIRO: ${{ github.run_number }}
-          CHIAVI_FILE: chiavi.txt
         run: |
-          N=$(gh issue list --state open --search "Controllo qualita VoxViva in:title" --json number -q '.[0].number')
-          : > chiavi.txt
-          if [ -n "$N" ]; then
-            gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$N/comments" \
-              --jq '.[] | .body | scan("<!-- chiave: ([^>]*?) -->") | .[0]' > chiavi.txt
+          if [ "$ESITO" != "success" ]; then
+            echo "::warning::Giro non riuscito: il sito resta fermo all'ultima versione pubblicata"
+            { echo "### Giro non riuscito: il sito resta fermo"; echo; echo '```'
+              tail -n 30 giro.log 2>/dev/null | sed -E 's/sk-ant-[A-Za-z0-9_-]+/sk-ant-***/g'
+              echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
-          python segnala.py > commento.txt
-          if [ ! -s commento.txt ]; then
-            echo "Niente di nuovo da segnalare: nessuna mail."
-          elif [ -n "$N" ]; then
-            gh issue comment "$N" --body-file commento.txt
-          else
-            gh issue create --title "Controllo qualita VoxViva" --body-file commento.txt
-          fi
+          python - <<'PY2'
+          import json, os
+          try:
+              a = json.load(open("web/stato.json")).get("allarmi") or []
+          except Exception as e:
+              a = ["stato.json non leggibile: %s" % e]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              if not a:
+                  f.write("### Giro riuscito, nessun allarme di qualita'\n")
+              else:
+                  f.write("### Giro riuscito, allarmi di qualita'\n\n")
+                  for x in a:
+                      f.write("- %s\n" % x)
+                      print("::warning::%s" % x.replace("\n", " "))
+          PY2
 
       - name: Configura Pages
         if: steps.serve.outputs.salta != 'si' && steps.rigenera.outcome == 'success'
