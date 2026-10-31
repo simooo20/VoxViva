@@ -112,7 +112,8 @@ jobs:
           ESITO: ${{ steps.rigenera.outcome }}
         run: |
           if [ "$ESITO" != "success" ]; then
-            echo "::warning::Giro non riuscito: il sito resta fermo all'ultima versione pubblicata"
+            ULTIMA=$(tail -n 1 giro.log 2>/dev/null | sed -E 's/sk-ant-[A-Za-z0-9_-]+/sk-ant-***/g; s/%/%25/g' | cut -c1-300)
+            echo "::warning::Giro non riuscito, il sito resta fermo. Ultima riga del log: $ULTIMA"
             { echo "### Giro non riuscito: il sito resta fermo"; echo; echo '```'
               tail -n 30 giro.log 2>/dev/null | sed -E 's/sk-ant-[A-Za-z0-9_-]+/sk-ant-***/g'
               echo '```'; } >> "$GITHUB_STEP_SUMMARY"
